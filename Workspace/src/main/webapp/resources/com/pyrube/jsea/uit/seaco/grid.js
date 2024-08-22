@@ -188,11 +188,11 @@
 			},
 			amount   : function (value, arg, argParams, column) {
 				var rowData = this.closest(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).data(Grid.Constants.OBJATTR_ROW_DATA);
-				var currency = JSEA.Jsons.formatProperty(rowData, column.ccyProp);
-				var formatName = (currency) ? Numbers.resolveCurrencyFormat(currency) : column.format;
-				var numberLabel = Numbers.format(value, formatName);
-				this.text(numberLabel);
-				return numberLabel;
+				var ccyCode = (column.ccyProp != null) ? JSEA.Jsons.formatProperty(rowData, column.ccyProp) : null;
+				var fmtName = (ccyCode != null || column.format == null) ? Numbers.resolveCurrencyFormat(ccyCode) : column.format;
+				var amtLabel = Numbers.format(value, fmtName);
+				this.text(amtLabel);
+				return amtLabel;
 			},
 			date     : function (value, arg, argParams, column) {
 				if (value == null) {
@@ -263,6 +263,16 @@
 				}
 				this.text(''.leftPad(value.length, JSEA.Constants.PASSCHAR_SUBSTITUTE));
 				return value;
+			},
+			rating   : function (value, arg, argParams, column) {
+				if (value == null) {
+					this.text('');
+					return null;
+				}
+				var $ratingbar = $(document.createElement("div")).appendTo(this);
+				$ratingbar.ratingbar();
+				$ratingbar.ratingbar("setValue", value);
+				return $ratingbar;
 			},
 			operations: function (value, arg, argParams, column) {
 				this.addClass('icon');
