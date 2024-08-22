@@ -3279,6 +3279,13 @@
 			}
 			this.attr(JSEA.Constants.ATTR_TOOLTIPS, value);
 			Tipbox.bind(this);
+		},
+		rating   : function (value, options) {
+			if (value == null) return;
+			this.empty();
+			var $ratingbar = $(document.createElement("div")).appendTo(this);
+			$ratingbar.ratingbar();
+			$ratingbar.ratingbar("setValue", value);
 		}
 	};
 
