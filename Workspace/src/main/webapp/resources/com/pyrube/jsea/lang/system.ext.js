@@ -297,3 +297,105 @@ String.prototype.leftPad = function (size, pad) {
 		return padding.join('').concat(this);
 	}
 };
+
+/**
+ * JSEA Decimal object
+ * 
+ * @author Aranjuez
+ * @version Dec 01, 2009
+ * @since Pyrube-JSEA 1.0
+ */
++function () {
+	'use strict';
+	/**
+	 * Constructor. 
+	 * @param 
+	 */ 
+	window.Decimal = function (value) {
+		this.value = new Big(value);
+	};
+
+	/**
+	 * 
+	 */
+	Decimal.prototype = Number.prototype;
+
+	/**
+	 * @param addends Number[]
+	 * @return <code>Decimal</code>
+	 */
+	Decimal.prototype.adds = function () {
+		if (arguments.length > 0) {
+			var result = this.value;
+			for (var i = 0; i < arguments.length; i++) {
+				result = result.plus(arguments[i]);
+			}
+		}
+		return Decimal.valueOf(result);
+	};
+
+	/**
+	 * @param subtrahend Number
+	 * @return <code>Decimal</code>
+	 */
+	Decimal.prototype.subtracts = function (subtrahend) {
+		return Decimal.valueOf(this.value.minus(subtrahend));
+	};
+
+	/**
+	 * @param multipliers Number[]
+	 * @return <code>Decimal</code>
+	 */
+	Decimal.prototype.multiplies = function () {
+		if (arguments.length > 0) {
+			var result = this.value;
+			for (var i = 0; i < arguments.length; i++) {
+				result = result.times(arguments[i]);
+			}
+		}
+		return Decimal.valueOf(result);
+	};
+
+	/**
+	 * @param divisor Number
+	 * @return <code>Decimal</code>
+	 */
+	Decimal.prototype.divides = function (divisor) {
+		return Decimal.valueOf(this.value.div(divisor));
+	};
+
+	/**
+	 * returns a new <code>Decimal</code> with a rounded value
+	 * @param s Integer
+	 * @return <code>Decimal</code>
+	 */
+	Decimal.prototype.round = function (s) {
+		var result = this.value.round(s);
+		return(Decimal.valueOf(result));
+	};
+
+	/**
+	 * returns <code>Number</code> of this <code>Decimal</code>
+	 * @return <code>Number</code>
+	 */
+	Decimal.prototype.toNumber = function () {
+		return this.value.toString() - 0;
+	};
+
+	/**
+	 * returns <code>String</code> of this <code>Decimal</code>
+	 * @return <code>String</code>
+	 */
+	Decimal.prototype.toString = function () {
+		return this.value.toString();
+	};
+
+	/**
+	 * returns a new <code>Decimal</code> with a <code>Number</code>
+	 * @return <code>Decimal</code>
+	 */
+	Decimal.valueOf = function (number) {
+		return(new Decimal(number));
+	}
+
+} ();
