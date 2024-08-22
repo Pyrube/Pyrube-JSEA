@@ -404,10 +404,11 @@
 	};
 	
 	/**
-	 * return currency scale
+	 * return the scale of the specified currency, or the default currency
 	 * @param ccyCode the currency code. e.g. CNY, USD
 	 */
 	Numbers.getCurrencyScale = function (ccyCode) {
+		ccyCode = ccyCode || JSEA.Constants.APP_PROPERTIES.APP_CURRENCY_DEFAULT;
 		return (JSEA.Constants.CURRENCIES[ccyCode]) ? JSEA.Constants.CURRENCIES[ccyCode].scale : 2;
 	};
 	
