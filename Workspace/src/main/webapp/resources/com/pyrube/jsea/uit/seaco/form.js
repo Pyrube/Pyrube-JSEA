@@ -206,16 +206,20 @@ window.Form.inited = function () {
 
 		// bind the event 'Close' if it is a popped form, and closeable also
 		if (this.options.popped && this.options.closeable) {
-			var poproxy = this.options.poproxy;
-			poproxy.off('close.jsea').on('close.jsea', function () {
-				$this.afterMoveout();
-			});
-			this.$element.on('close.jsea', function () {
-				poproxy.close();
-			});
-			$('.buttons > .btn.close', this.$element).click(function () {
-				$this.$element.trigger('close');
-			});
+			if (this.options.prev == null) {
+				$(".buttons > .btn.close", this.$element).button('destroy').empty().remove();
+			} else {
+				var poproxy = this.options.poproxy;
+				poproxy.off('close.jsea').on('close.jsea', function () {
+					$this.afterMoveout();
+				});
+				this.$element.on('close.jsea', function () {
+					poproxy.close();
+				});
+				$('.buttons > .btn.close', this.$element).click(function () {
+					$this.$element.trigger('close');
+				});
+			}
 		}
 	};
 
@@ -1110,7 +1114,7 @@ window.Form.inited = function () {
 		var $this = this;
 		// activate operations
 		var opnames     = [];
-		this.operations = this.$grid.getOperations(); // grid operations. array of operations [{name : '', url : '', mode : '' ...}]
+		this.operations = this.$grid.getOperations(); // register grid operations. array of operations [{name : '', url : '', mode : '' ...}]
 		for (var operation of this.operations) {
 			opnames.push(operation.name);
 			operation.inline = true;
@@ -1118,10 +1122,10 @@ window.Form.inited = function () {
 		for (var operation of this.options.operations) { // more operations for nested form of this form
 			var isJson = false;
 			var opname = (isJson = (typeof(operation) != 'string')) ? operation.name : operation;
-			opnames.push(opname);
-			if (isJson && operation.enabled) this.operations.push(operation); // 
+			if (isJson && operation.enabled) this.operations.push(operation); // register the enabled JSON operation
+			else opnames.push(opname); // will register as below if the specified button exists
 		}
-		$('.buttons > .btn:not(.close,.back)', this.$element).each(function () {  // button operations
+		$('.buttons > .btn:is(.' + opnames.join(',.') + ')', this.$element).each(function () {  // register button operations
 			var $button$    = $(this).data('jsea.plugin');
 			var postOptions = $button$.postOptions();
 			postOptions.inline = false;
@@ -1221,17 +1225,17 @@ window.Form.inited = function () {
 	GridForm.prototype.async = function ($trigger, opname, url, params) {
 		var $this = this;
 		$.ajax({
-			url: CONTEXT_PATH + url,
-			data: params,
 			method: 'POST',
+			url: JSEA.getPageContext().resolveUrl(url, params),
+			data: params,
 			dataType: "json",
 			beforeSend: function () {
 				$trigger.waiting();
 			},
 			success: function (data) {
-				$trigger.waiting('hide');
 				$this.refresh();
 				Message.success($this.options.funcname + ".success." + opname);
+				$trigger.waiting('hide');
 			},
 			error: function (xhr) {
 				$trigger.waiting('hide');
@@ -1556,10 +1560,10 @@ window.Form.inited = function () {
 			for (var action of this.options.actions) { // enabled actions for nested form of this form
 				var isJson = false;
 				var actname = (isJson = (typeof(action) != 'string')) ? action.name : action;
-				actnames.push(actname);
-				if (isJson && action.enabled) this.actions.push(action); // 
+				if (isJson && action.enabled) this.actions.push(action); // register the enabled JSON action
+				else actnames.push(actname); // will register as below if the specified button exists
 			}
-			$('.buttons > .btn:is(.' + actnames.join(',.') + ')', this.$element).each(function () {  // button actions
+			$('.buttons > .btn:is(.' + actnames.join(',.') + ')', this.$element).each(function () {  // register button actions
 				var $button$ = $(this).data('jsea.plugin');
 				$this.actions.push($button$.postOptions());
 			});
@@ -1853,7 +1857,7 @@ window.Form.inited = function () {
 	PopupForm.prototype.constructor = PopupForm;
 	
 	PopupForm.prototype.okay = function (action) {
-		this.options.poproxy.finish(this.raw);
+		if (this.options.poproxy) this.options.poproxy.finish(this.raw);
 	};
 	
 	PopupForm.prototype.saveclose = function (action) {
