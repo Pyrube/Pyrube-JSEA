@@ -577,6 +577,7 @@ var Messages = {
 	Navbar.VERSION  = '1.1.0';
 
 	Navbar.DEFAULTS = {
+		type : 'APP'
 	};
 
 	Navbar.Constants = {
@@ -609,7 +610,7 @@ var Messages = {
 		var $this = this;
 		// initialize first level nav-items and mark the current nav-item
 		$.ajax({
-			url : JSEA.getPageContext().resolveUrl('user/nav'),
+			url : JSEA.getPageContext().resolveUrl('user/nav/nav_' + this.options.type),
 			type : 'get',
 			dataType : 'json',
 			success : function(navItems) {
@@ -653,30 +654,20 @@ var Messages = {
 	};
 
 	Navbar.prototype.getOptions = function (options) {
-		options = $.extend(true, {}, this.getDefaults(), options);
-		
+		var navbarOptions = JSEA.Jsons.parse(this.$element.attr(JSEA.Constants.ATTR_NAVBAR_OPTIONS));
+
+		options = $.extend(true, {}, this.getDefaults(), navbarOptions, options);
+
 		return options;
 	};
-  
+
 	// NAVBAR PLUGIN DEFINITION
 	// ==========================
 
 	function Plugin(option) {
-		var self = this;
-
-		// NAVBAR PUBLIC METHOD DEFINITION
-		// =================================
-		self.append = function (navOptions) {
-			return self.each(function () {
-				var $this = $(this);
-				var data  = $this.data('jsea.navbar');
-				data.append(navOptions);
-			});
-		};
-		
 		return this.each(function () {
 			var $this   = $(this);
-			
+
 			var data    = $this.data('jsea.navbar');
 			var options = typeof option == 'object' && option;
 
@@ -1537,6 +1528,190 @@ PagebarFactory.newInstance = function (options) {
 	};
 
 } (jQuery);
+
+/**
+ * JSEA Rating-bar component
+ * 
+ * @author Aranjuez
+ * @version Dec 01, 2009
+ * @since Pyrube-JSEA 1.0
+ * @dependence: jQuery: jquery.js v1.11.3
+ */
++function ($) {
+	'use strict';
+
+	// RATINGBAR PUBLIC CLASS DEFINITION
+	// ===================================
+
+	var Ratingbar = function (element, options) {
+		this.init('ratingbar', element, options);
+	};
+
+	Ratingbar.VERSION  = '1.0.0';
+
+	Ratingbar.DEFAULTS = {
+		type      : 'percent',
+		ratable   : true,
+		value     : 0, // original value: 0 - 1
+		level     : 1,
+		levels    : [1, 2, 3, 4, 5], // 5 levels: 1 - very low; 2 - low; 3 - medium; 4 - high; 5 - very high
+		dividers  : [20, 40, 60, 80, 100],
+		hasText   : true,
+		text      : '{value}%',
+		onChange  : function (newValue, oldValue) {}
+	};
+
+	Ratingbar.prototype.init = function (type, element, options) {
+		this.type      = type;
+		this.$element  = $(element);
+		this.options   = this.getOptions(options);
+
+		// initialize this Rating-bar
+		this.initComponent();
+		// initialize events of this Rating-bar
+		this.initEvents();
+	};
+
+	Ratingbar.prototype.initComponent = function () {
+		this.$element
+			.addClass('ratingbar level')
+			.html('<div class="ratingbar-value"></div><div class="ratingbar-text"></div>');
+	};
+
+	Ratingbar.prototype.initEvents = function () {
+		var $this = this;
+		if (this.options.ratable) {
+			this.value    = 0;  // the real-time value while rating
+			this.$element.on('mouseenter.jsea touchstart.jsea', function (evt) {
+				evt = evt || window.event;
+				$this.$element.addClass('rating');
+				// event stopper
+				evt.preventDefault && evt.preventDefault();
+				evt.returnValue = false;
+				evt.stopPropagation && evt.stopPropagation();
+				evt.cancelBubble = false;
+				return false;
+			}).on('mousemove.jsea touchmove.jsea', function (evt) {
+				evt = evt || window.event;
+				var offsetX    = (evt.offsetX !== undefined) ? evt.offsetX : (evt.originalEvent.changedTouches[0].pageX - $this.$element[0].getBoundingClientRect().left);
+				var innerWidth = $this.$element.innerWidth();
+				$this.value    = Decimal.valueOf(offsetX).divides(innerWidth).round(2).toNumber();
+				$this.render($this.value);
+				// event stopper
+				evt.preventDefault && evt.preventDefault();
+				evt.returnValue = false;
+				evt.stopPropagation && evt.stopPropagation();
+				evt.cancelBubble = false;
+				return false;
+			}).on('click.jsea touchend.jsea', function (evt) {
+				evt = evt || window.event;
+				$this.setValue($this.value);
+				// event stopper
+				evt.preventDefault && evt.preventDefault();
+				evt.returnValue = false;
+				evt.stopPropagation && evt.stopPropagation();
+				evt.cancelBubble = false;
+				return false;
+			}).on('mouseleave.jsea', function (evt) {
+				evt = evt || window.event;
+				$this.$element.removeClass('rating');
+				$this.render($this.options.value);
+				// event stopper
+				evt.preventDefault && evt.preventDefault();
+				evt.returnValue = false;
+				evt.stopPropagation && evt.stopPropagation();
+				evt.cancelBubble = false;
+				return false;
+			});
+		}
+	};
+
+	Ratingbar.prototype.render = function (value) {
+		var level = this.options.level;
+		if ('percent' == this.options.type) {
+			if (value < 0) value = 0;
+			if (value > 1) value = 1;
+			value = Decimal.valueOf(value).multiplies(100).toNumber();
+		}
+		for (var i = 0; i < this.options.dividers.length; i++) {
+			this.$element.removeClass('_' + this.options.levels[i]);
+		}
+		for (var i = 0; i < this.options.dividers.length; i++) {
+			if (value <= this.options.dividers[i]) {
+				level = this.options.levels[i];
+				this.$element.addClass('_' + level);
+				break;
+			}
+		}
+		this.$element.find('div.ratingbar-value').width(value + '%');
+		if (this.options.hasText) {
+			var text = this.options.text.replace(/{value}/, value);
+			this.$element.find('div.ratingbar-text').html(text);
+		}
+		return level;
+	};
+
+	Ratingbar.prototype.getValue = function () {
+		return this.options.value;
+	};
+
+	Ratingbar.prototype.setValue = function (value) {
+		var oldValue = this.options.value;
+		var level    = this.render(value);
+		if (oldValue != value) {
+			this.options.level = level;
+			this.options.value = value;
+			this.options.onChange.call(this, value, oldValue);
+		}
+	};
+
+	Ratingbar.prototype.getDefaults = function () {
+		return Ratingbar.DEFAULTS;
+	};
+
+	Ratingbar.prototype.getOptions = function (options) {
+		options = $.extend({}, this.getDefaults(), options);
+		
+		return options;
+	};
+  
+	// RATINGBAR PLUGIN DEFINITION
+	// =============================
+
+	function Plugin(option) {
+		var self = this;
+
+		// RATINGBAR PUBLIC METHOD DEFINITION
+		// ====================================
+		var selfArguments = arguments;
+		return this.each(function () {
+			var $this   = $(this);
+			
+			var data    = $this.data('jsea.ratingbar');
+			var options = typeof option == 'object' && option;
+
+			if (!data && /getValue|setValue/.test(option)) return;
+			if (!data) $this.data('jsea.ratingbar', (data = new Ratingbar(this, options)));
+			if (typeof option == 'string') data[option](selfArguments[1]);
+		});
+	}
+
+	var old = $.fn.ratingbar;
+
+	$.fn.ratingbar             = Plugin;
+	$.fn.ratingbar.Constructor = Ratingbar;
+
+
+	// RATINGBAR NO CONFLICT
+	// =======================
+
+	$.fn.ratingbar.noConflict = function () {
+		$.fn.ratingbar = old;
+		return this;
+	};
+
+} (jQuery);
+
 /**
  * JSEA Tabs component
  * @author Aranjuez
