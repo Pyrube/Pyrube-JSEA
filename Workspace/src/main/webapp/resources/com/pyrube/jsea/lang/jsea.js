@@ -423,6 +423,7 @@ JSEA.Constants = {
 	ATTR_STEP_OPTIONS     : 'jsea-step-options',
 	ATTR_LOADING_OPTIONS  : 'jsea-loading-options',
 	ATTR_SCROLLING_OPTIONS : 'jsea-scrolling-options',
+	ATTR_NAVBAR_OPTIONS   : 'jsea-navbar-options',
 	ATTR_TOOLTIPS         : 'jsea-tooltips',
 	ATTR_VALUE            : 'data-value',
 	ATTR_LABEL            : 'data-label',
@@ -474,6 +475,7 @@ JSEA.Constants = {
 		'wizard'            :  'jsea-wizard-options',
 		'loading'           :  'jsea-loading-options',
 		'scrolling'         :  'jsea-scrolling-options',
+		'navbar'            :  'jsea-navbar-options',
 		'validator'         : ['jsea-valid-type', 'jsea-valid-rules']
 	},
 	APP_PROPERTIES        : undefined,
