@@ -1,0 +1,102 @@
+/******************************/
+/***      JSEA Layout       ***/
+/******************************/
+
+:root {
+	--jsea-link: #0F649D;
+	--jsea-font: #323232;
+	--jsea-font-disabled: #828282;
+	--jsea-color: #FFFFFF;
+	--jsea-color-disabled: #EDEDED;
+	--jsea-border: 1px solid #CFCFCF;
+	--jsea-error-arrow: #EB543F;
+	--jsea-error-border: 1px solid #EB543F;
+	--jsea-success-color: #E9FEDA;
+	--jsea-success-border: 1px solid #5BAC87;
+}
+html[data-theme="DARK"] {
+	--jsea-link: #8CB4FF;
+	--jsea-font: #FFFFFF;
+	--jsea-font-disabled: #828282;
+	--jsea-color: #1C1C1C;
+	--jsea-color-disabled: #9C9C9C;
+	--jsea-border: 1px solid #696969;
+	--jsea-error-arrow: #EB543F;
+	--jsea-error-border: 1px solid #EB543F;
+	--jsea-success-color: #96A48B;
+	--jsea-success-border: 1px solid #5BAC87;
+}
+::-webkit-scrollbar { display: none; }
+
+* {
+	margin: 0;
+	padding: 0;
+	font-size: 100%;
+	vertical-align: baseline;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	scrollbar-width: none;
+}
+
+*:before,
+*:after {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	-ms-text-size-adjust: 100%;
+}
+body   { margin: 0; font-family: 'Helvetica Neue', sans-serif; font-size: 12px; }
+form   { display: block; }
+ul, li { list-style: none; }
+a      { text-decoration: none; background-color: transparent; }
+
+/** Sliding Container **/
+.sliding-container { position: relative; }
+
+.sliding-out {
+	position: absolute;
+	opacity: 1;
+	top: 0;
+	-webkit-transition: all 0.6s linear;
+	-moz-transition: all 0.6s linear;
+	-o-transition: all 0.6s linear;
+	transition: all 0.6s linear;
+}
+.sliding-out.hidden { opacity: 0; top: 300px; }
+
+.sliding-in {
+	position: absolute;
+	opacity: 0;
+	top: -300px;
+	-webkit-transition: all 0.6s linear;
+	-moz-transition: all 0.6s linear;
+	-o-transition: all 0.6s linear;
+	transition: all 0.6s linear;
+}
+.sliding-in.visible { opacity: 1; top: 0; }
+
+/** Fading Container **/
+.fading-container { }
+
+.fading-out {
+	opacity: 1;
+	-webkit-transition: all 0.2s linear;
+	-moz-transition: all 0.2s linear;
+	-o-transition: all 0.2s linear;
+	transition: all 0.2s linear;
+}
+.fading-out.hidden { opacity: 0; }
+
+.fading-in {
+	opacity: 0;
+	-webkit-transition: all 0.2s linear;
+	-moz-transition: all 0.2s linear;
+	-o-transition: all 0.2s linear;
+	transition: all 0.2s linear;
+}
+.fading-in.visible { opacity: 1; }
