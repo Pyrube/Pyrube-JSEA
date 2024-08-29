@@ -1551,7 +1551,7 @@ PagebarFactory.newInstance = function (options) {
 
 	Ratingbar.DEFAULTS = {
 		type      : 'percent',
-		ratable   : true,
+		ratable   : false,
 		value     : 0, // original value: 0 - 1
 		level     : 1,
 		levels    : [1, 2, 3, 4, 5], // 5 levels: 1 - very low; 2 - low; 3 - medium; 4 - high; 5 - very high
@@ -1576,6 +1576,10 @@ PagebarFactory.newInstance = function (options) {
 		this.$element
 			.addClass('ratingbar level')
 			.html('<div class="ratingbar-value"></div><div class="ratingbar-text"></div>');
+		var value = this.standardizeValue(this.options.value);
+		var level = this.render(value);
+		this.options.value = value;
+		this.options.level = level;
 	};
 
 	Ratingbar.prototype.initEvents = function () {
@@ -1595,7 +1599,7 @@ PagebarFactory.newInstance = function (options) {
 				evt = evt || window.event;
 				var offsetX    = (evt.offsetX !== undefined) ? evt.offsetX : (evt.originalEvent.changedTouches[0].pageX - $this.$element[0].getBoundingClientRect().left);
 				var innerWidth = $this.$element.innerWidth();
-				$this.value    = Decimal.valueOf(offsetX).divides(innerWidth).round(2).toNumber();
+				$this.value    = this.standardizeValue(Decimal.valueOf(offsetX).divides(innerWidth));
 				$this.render($this.value);
 				// event stopper
 				evt.preventDefault && evt.preventDefault();
@@ -1651,6 +1655,10 @@ PagebarFactory.newInstance = function (options) {
 		return level;
 	};
 
+	Ratingbar.prototype.standardizeValue = function (value) {
+		return Decimal.valueOf(value).round(2).toNumber();
+	};
+
 	Ratingbar.prototype.getValue = function () {
 		return this.options.value;
 	};
@@ -1661,7 +1669,11 @@ PagebarFactory.newInstance = function (options) {
 		if (oldValue != value) {
 			this.options.level = level;
 			this.options.value = value;
-			this.options.onChange.call(this, value, oldValue);
+			var fnChange = this.options.onChange;
+			if ($.isFunction(fnChange)) {
+				fnChange.apply(this.$element.data('jsea.plugin'), [value, oldValue]);
+			}
+			this.$element.trigger('change');
 		}
 	};
 
@@ -1686,9 +1698,11 @@ PagebarFactory.newInstance = function (options) {
 		var selfArguments = arguments;
 		return this.each(function () {
 			var $this   = $(this);
-			
+			var plugin  = $this.data('jsea.plugin');
 			var data    = $this.data('jsea.ratingbar');
 			var options = typeof option == 'object' && option;
+
+			if (!plugin) $this.data('jsea.plugin', self);
 
 			if (!data && /getValue|setValue/.test(option)) return;
 			if (!data) $this.data('jsea.ratingbar', (data = new Ratingbar(this, options)));
