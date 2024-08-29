@@ -256,6 +256,40 @@
 				}
 				return $link;
 			},
+			onoff    : function (value, arg, argParams, column) {
+				if (value == null) {
+					this.text('');
+					return null;
+				}
+				// @param arg is an array: item 0 is for on, item 1 is for off
+				var $onoff$   = this.data(Grid.Constants.OBJATTR_ONE_INSTANCE);
+				if ($onoff$  != null) {
+					$onoff$.toggle(value == arg[0]);
+					return $onoff$;
+				}
+				var operation = column.operations[0];
+				var $link     = $(document.createElement(JSEA.Constants.TAG_LINK)).appendTo(this.empty());
+				var $onoff$   = null;
+				if (operation != null) {
+					// it is a link and can be used for ajax operation
+					$onoff$   = $link.onoff({ name : operation.name, on : (value == arg[0]), method : null }); 
+				} else {
+					var $this = this; // this cell
+					// also a link, just toggle itself for row data
+					$onoff$   = $link.onoff({ on : (value == arg[0]), onToggle : function (on) {
+						var rowData = $this.closest(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).data(Grid.Constants.OBJATTR_ROW_DATA);
+						JSEA.Jsons.setProperty(rowData, column.name, (on ? arg[0] : arg[1]));
+					} });
+				}
+				this.data(Grid.Constants.OBJATTR_ONE_INSTANCE, $onoff$);
+				if (operation != null) {
+					operation.colIndex = column.index;
+					operation.scope    = JSEA.Constants.SCOPE_CELL;
+					operation.pathnames= column.name;
+					$link.data(Grid.Constants.OBJATTR_OPERATION_OPTIONS, operation);
+				}
+				return $onoff$;
+			},
 			password : function (value, arg, argParams, column) {
 				if (value == null) {
 					this.text('');
@@ -270,8 +304,7 @@
 					return null;
 				}
 				var $ratingbar = $(document.createElement("div")).appendTo(this);
-				$ratingbar.ratingbar();
-				$ratingbar.ratingbar("setValue", value);
+				$ratingbar.ratingbar({ value : value });
 				return $ratingbar;
 			},
 			operations: function (value, arg, argParams, column) {
@@ -312,6 +345,7 @@
 	});
 
 	Grid.Constants = {
+		OBJATTR_ONE_INSTANCE     : 'jsea-grid-col-one-instance',
 		OBJATTR_ROW_DATA         : 'jsea-grid-row-data',
 		OBJATTR_COLUMN_OPTIONS   : 'jsea-grid-col-options',
 		OBJATTR_OPERATION_OPTIONS: 'jsea-grid-op-options',
@@ -417,6 +451,7 @@
 		this.$listHeader.find(Grid.LAYOUT.HEADER_COL_TAGNAME).each(function (i) {
 			var $headerColumn = $(this);
 			var column = $.extend({}, $this.options.DEFAULT_COLUMN, JSEA.Jsons.parse($headerColumn.attr(JSEA.Constants.ATTR_COL_OPTIONS)));
+			column.index = i;
 			column.types = (column.type.indexOf(JSEA.Constants.PROP_DELIM) >= 0) ? column.type.split(JSEA.Constants.PROP_DELIM) : null;
 			column.type0 = (column.types != null) ? column.types[0] : column.type;
 			column.sortable = ($this.options.sortable && (column.sortable === undefined || column.sortable == true));
@@ -636,20 +671,26 @@
 					$(this).removeData(Grid.Constants.OBJATTR_ROW_DATA);
 				});
 	};
-	
+
 	Grid.prototype.addRow = function (data) {
-		this.count++;
+		this.insertRow(-1, data);
+	};
+
+	Grid.prototype.insertRow = function (index, data) {
+		if (index > this.count) throw new Error('Row index is out of range: ' + this.count);
 		var $this = this;
 		// new row first
-		var $row = 
-			$(document.createElement(Grid.LAYOUT.BODY_ROW_TAGNAME))
-				.addClass(Grid.LAYOUT.BODY_ROW_STYLESHEET)
-				.appendTo(this.$listArea);
+		var $row    = $(document.createElement(Grid.LAYOUT.BODY_ROW_TAGNAME)).addClass(Grid.LAYOUT.BODY_ROW_STYLESHEET);
+		if (index == -1 || this.count == 0 || this.count == index) $row.appendTo(this.$listArea);
+		else $row.insertBefore(this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index));
+		this.setRowData(index, data);
 		// build row then
-		var index = (this.getRowCount() - 1);
 		this.buildRow(index, $row, data);
-		// fire rowadd event
+		// fire row events
+		this.fireRowDataWriting(index, data);
 		this.fireRowAdded(index, data);
+		// ++
+		this.count++;
 		
 		// animation for adding
 		this.$listArea.addClass('fading-container');
@@ -663,17 +704,19 @@
 			}, Grid.Constants.SLIDE_SPEED);
 		}, 10);
 	};
-	
+
 	Grid.prototype.modifyRow = function (index, data) {
 		// clear old row first
-		var row = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index);
+		var row  = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index);
 		var $row = $(row).removeData(Grid.Constants.OBJATTR_ROW_DATA).empty();
+		this.setRowData(index, data);
 		// rebuild row then
 		this.buildRow(index, $row, data);
-		// fire rowmodify event
+		// fire row event
+		this.fireRowDataWriting(index, data);
 		this.fireRowModified(index, data);
 	};
-	
+
 	Grid.prototype.removeRow = function (index) {
 		this.count--;
 		var $this = this;
@@ -707,10 +750,8 @@
 		// fire rowremove event
 		this.fireRowRemoved(index, data);
 	};
-	
+
 	Grid.prototype.buildRow = function (index, $row, data) {
-		this.fireRowDataWriting(index, data);
-		$row.data(Grid.Constants.OBJATTR_ROW_DATA, data);
 		for (var renderName in this.options.renders) {
 			var handler  = this.options.renders[renderName],
 				handlers = this.options.renders[renderName];
@@ -732,7 +773,7 @@
 			$cell.addClass(column.stylesheet);
 			var value = null;
 			if (column.name != null && column.name.length != 0) {
-				value = JSEA.Jsons.formatProperty(data, column.name);
+				value = JSEA.Jsons.getProperty(data, column.name);
 				if (value == null && column.defaultValue != null) {
 					JSEA.Jsons.setProperty(data, column.name, value = column.defaultValue);
 				}
@@ -740,7 +781,44 @@
 			this.convertCell($cell, data, column);
 		}
 	};
-	
+
+	Grid.prototype.refreshRow = function (rowIndex, rowData) {
+		this.clearRowData(rowIndex);
+		var $this  = this;
+		var row    = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index);
+		var $cells = $row.children(Grid.LAYOUT.BODY_COL_TAGNAME);
+		$cells.each(function (i) {
+			var $cell   = $(this);
+			var column = $this.options.columns[colIndex];
+			var value  = null;
+			if (column.name != null && column.name.length != 0) {
+				value = JSEA.Jsons.getProperty(rowData, column.name);
+				if (value == null && column.defaultValue != null) {
+					JSEA.Jsons.setProperty(rowData, column.name, value = column.defaultValue);
+				}
+			}
+			this.convertCell($cell, rowData, column);
+		});
+		this.setRowData(index, data);
+	};
+
+	Grid.prototype.refreshCell = function (rowIndex, colIndex, rowData) {
+		this.clearRowData(rowIndex);
+		var row    = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(rowIndex);
+		var $row   = $(row);
+		var $cell  = $($row.children(Grid.LAYOUT.BODY_COL_TAGNAME).get(colIndex));
+		var column = this.options.columns[colIndex];
+		var value  = null;
+		if (column.name != null && column.name.length != 0) {
+			value = JSEA.Jsons.getProperty(rowData, column.name);
+			if (value == null && column.defaultValue != null) {
+				JSEA.Jsons.setProperty(rowData, column.name, value = column.defaultValue);
+			}
+		}
+		this.convertCell($cell, rowData, column);
+		this.setRowData(rowIndex, rowData);
+	};
+
 	Grid.prototype.rewriteColumn = function (index) {
 		var $this = this;
 		var $rows = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET);
@@ -806,6 +884,12 @@
 					typeArgValue = this.resolveCellLabel($anotherCell, anotherColumn.type0, rowData, anotherColumn);
 				} else {
 					typeArgValue = JSEA.Jsons.formatProperty(rowData, typeArg);
+				}
+			} else if (typeArgValue != null) {
+				var s = -1, e = -1;
+				if ((s = typeArgValue.indexOf(JSEA.Constants.ARRAY_TOKEN_START)) == 0 && (e = typeArgValue.indexOf(JSEA.Constants.ARRAY_TOKEN_END)) > 0) {
+					// it is for array, e.g. [Y,N]
+					typeArgValue = typeArgValue.substring(s + 1, e).split(JSEA.Constants.ARGS_DELIM);
 				}
 			}
 			if (idx >= 0) typeArgParams = typeArgExpr.substring(idx + 1)
@@ -896,6 +980,16 @@
 	Grid.prototype.getRowData = function (index) {
 		var row = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index);
 		return $.extend(true, {}, $(row).data(Grid.Constants.OBJATTR_ROW_DATA));
+	};
+	
+	Grid.prototype.setRowData = function (index, rowData) {
+		var row = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index);
+		$(row).data(Grid.Constants.OBJATTR_ROW_DATA, rowData);
+	};
+	
+	Grid.prototype.clearRowData = function (index) {
+		var row = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index);
+		$(row).removeData(Grid.Constants.OBJATTR_ROW_DATA);
 	};
 	
 	Grid.prototype.getSectionData = function () {
@@ -1222,12 +1316,36 @@
 			});
 		};
 
+		self.refreshRow = function (rowIndex, rowData) {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				data.refreshRow(rowIndex, rowData);
+			});
+		};
+
+		self.refreshCell = function (rowIndex, colIndex, rowData) {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				data.refreshCell(rowIndex, colIndex, rowData);
+			});
+		};
+
 		self.resetColumn = function (colIndex, colProp) {
 			return self.each(function () {
 				var $this   = $(this);
 				var data    = $this.data('jsea.grid');
 				$.extend(data.options.columns[colIndex], { property : colProp });
 				data.rewriteColumn(colIndex);
+			});
+		};
+
+		self.setRowData = function (rowIndex, rowData) {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				data.setRowData(rowIndex, rowData);
 			});
 		};
 
