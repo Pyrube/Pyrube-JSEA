@@ -445,6 +445,12 @@ JSEA.Constants = {
 	I18N_KEY_SEPARATOR    : '.',
 	PATH_SEPARATOR        : '.',
 	URL_SEPARATOR         : '/',
+	// the scope of refreshing after operation executed
+	SCOPE_DEFAULT         : -1,
+	SCOPE_NONE            : 0,
+	SCOPE_GRID            : 1,
+	SCOPE_ROW             : 2,
+	SCOPE_CELL            : 3,
 	STAT_ADDED            : 'A',
 	STAT_MODIFIED         : 'M',
 	STAT_REMOVED          : 'R',
@@ -579,6 +585,19 @@ JSEA.Jsons = {
 		} else {
 			return (obj[propName]);
 		}
+	},
+	getProperty : function (obj, prop) {
+		while ((idx = prop.indexOf(JSEA.Constants.PATH_SEPARATOR)) > 0) {
+			if (!$.isPlainObject(obj)) return obj;
+			obj = obj[prop.substring(0, idx)];
+			prop = prop.substring(idx + JSEA.Constants.PATH_SEPARATOR.length, prop.length);
+		}
+		var propName = prop;
+		if (prop.indexOf(JSEA.Constants.PROP_DELIM) > 0) {
+			var a = prop.split(JSEA.Constants.PROP_DELIM);
+			propName = a[0];
+		}
+		return (obj[propName]);
 	},
 	setProperty : function (obj, prop, value) {
 		while ((idx = prop.indexOf(JSEA.Constants.PATH_SEPARATOR)) > 0) {
