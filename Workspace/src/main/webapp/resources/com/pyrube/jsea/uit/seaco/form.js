@@ -273,15 +273,15 @@ window.Form.inited = function () {
 	};
 
 	BaseForm.prototype.resolveOperationUrl = function (operation) {
-		var name   = operation.name;
 		var url    = operation.url;
-		var more   = operation.more;
-		return url || JSEA.resolveUrl(this.options.basename, this.options.funcname, [more, name]);
+		var name   = operation.name;
+		var pathnames = operation.pathnames;
+		return url || JSEA.resolveUrl(this.options.basename, this.options.funcname, [name].concat(pathnames));
 	};
 
 	BaseForm.prototype.resolveActionUrl = function (action) {
-		var name   = action.name;
 		var url    = action.url
+		var name   = action.name;
 		return url || JSEA.resolveUrl(this.options.basename, this.options.funcname, [this.options.operation, name]);
 	};
 
@@ -297,11 +297,17 @@ window.Form.inited = function () {
 		}
 		var mode = operation.mode;
 		if (!mode) mode = this.options.mode;
-		this[mode]($trigger, opname, url, params);
+		this[mode]($trigger, $.extend(true, {}, operation, {
+			name   : opname,
+			url    : url,
+			params : params
+		}));
 	};
 
-	BaseForm.prototype.forward = function ($trigger, opname, url, params) {
-		var $this = this;
+	BaseForm.prototype.forward = function ($trigger, operation) {
+		var $this  = this;
+		var url    = operation.url;
+		var params = operation.params;
 		var accessUrl = JSEA.getPageContext().resolveUrl(url, params);
 		$.ajax({
 			url: accessUrl,
@@ -340,8 +346,11 @@ window.Form.inited = function () {
 		});
 	};
 
-	BaseForm.prototype.popup = function ($trigger, opname, url, params) {
-		var $this = this;
+	BaseForm.prototype.popup = function ($trigger, operation) {
+		var $this  = this;
+		var url    = operation.url;
+		var params = operation.params;
+		var scope  = operation.scope;
 		Dialog.open({
 			owner     : this.$element.data('jsea.plugin'),
 			url       : url,
@@ -351,8 +360,13 @@ window.Form.inited = function () {
 				success: function () { $trigger.waiting('hide'); },
 				error  : function () { $trigger.waiting('hide'); }
 			},
-			complete  : function (rowData) {
-				$this.refresh();
+			complete  : function (data) {
+				$this.refresh({
+					scope : scope,
+					row   : operation.rowIndex,
+					cell  : operation.colIndex,
+					data  : data
+				});
 			}
 		});
 	};
@@ -386,7 +400,7 @@ window.Form.inited = function () {
 						$this.afterMoveout();
 					}, BaseForm.Constants.SLIDE_SPEED);
 				}, 10);
-				if (saved) $prev.refresh();
+				if (saved) $prev.refresh({ scope : JSEA.Constants.SCOPE_DEFAULT });
 			} else {
 				target = target || 'user/home';
 				Message.onClose(function () { location.href = JSEA.getPageContext().resolveUrl('user/forward?target=' + encodeURIComponent(target)); });
@@ -453,7 +467,7 @@ window.Form.inited = function () {
 		this.release();
 	};
 
-	BaseForm.prototype.refresh = function () {
+	BaseForm.prototype.refresh = function (options) {
 		window.Page.reload(this.$element.data('jsea.plugin'));
 	};
 
@@ -1153,11 +1167,11 @@ window.Form.inited = function () {
 		var $this = this;
 		$('.' + operation.name, $this.$element).not('.disabled')
 			.bind('click.jsea', function () {
-				operation = $.extend(operation, { trigger: this });
 				if (operation.dors && !$this.$grid.hasSection()) {
 					Message.info('message.info.no-record-selected');
 					return false;
 				}
+				operation = $.extend(operation, { trigger : this, rowIndex : $this.$grid.getSectionIndexes() });
 				operation.method($this, operation);
 				return false;
 			});
@@ -1183,11 +1197,19 @@ window.Form.inited = function () {
 		operation.params = params;
 		var mode = operation.mode;
 		if (!mode) mode = this.options.mode;
-		this[mode]($trigger, opname, url, params);
+		this[mode]($trigger, $.extend(true, {}, operation, {
+			name   : opname,
+			url    : url,
+			params : params,
+			scope  : (operation.scope !== undefined) ? operation.scope : JSEA.Constants.GRID
+		}));
 	};
 
-	GridForm.prototype.lookup = function ($trigger, opname, url, params) {
-		var $this = this;
+	GridForm.prototype.lookup = function ($trigger, operation) {
+		var $this  = this;
+		var url    = operation.url;
+		var params = operation.params;
+		var scope  = operation.scope;
 		Lookup.open({
 			url       : url,
 			urlParams : params,
@@ -1197,14 +1219,23 @@ window.Form.inited = function () {
 				success: function () { $trigger.waiting('hide'); },
 				error  : function () { $trigger.waiting('hide'); }
 			},
-			complete  : function (rowData) {
-				$this.refresh();
+			complete  : function (data) {
+				$this.refresh({
+					scope : scope,
+					row   : operation.rowIndex,
+					cell  : operation.colIndex,
+					data  : data
+				});
 			}
 		});
 	};
 
-	GridForm.prototype.popdown = function ($trigger, opname, url, params) {
-		var $this = this;
+	GridForm.prototype.popdown = function ($trigger, operation) {
+		var $this  = this;
+		var opname = operation.name;
+		var url    = operation.url;
+		var params = operation.params;
+		var scope  = operation.scope;
 		var funcname = this.options.funcname;
 		Popdown.request({
 			trigger   : $trigger,
@@ -1216,14 +1247,24 @@ window.Form.inited = function () {
 				success: function () { $trigger.waiting('hide'); },
 				error  : function () { $trigger.waiting('hide'); }
 			},
-			complete  : function (rowData) {
-				$this.refresh();
+			complete  : function (data) {
+				$this.refresh({
+					scope : scope,
+					row   : operation.rowIndex,
+					cell  : operation.colIndex,
+					data  : data
+				});
 			}
 		});
 	};
 
-	GridForm.prototype.async = function ($trigger, opname, url, params) {
-		var $this = this;
+	GridForm.prototype.async = function ($trigger, operation) {
+		var $this  = this;
+		var opname = operation.name;
+		var url    = operation.url;
+		var params = operation.params;
+		var scope  = operation.scope;
+		var funcname = this.options.funcname;
 		$.ajax({
 			method: 'POST',
 			url: JSEA.getPageContext().resolveUrl(url, params),
@@ -1233,9 +1274,13 @@ window.Form.inited = function () {
 				$trigger.waiting();
 			},
 			success: function (data) {
-				$this.refresh();
-				Message.success($this.options.funcname + ".success." + opname);
 				$trigger.waiting('hide');
+				$this.refresh({
+					scope : scope,
+					row   : operation.rowIndex,
+					cell  : operation.colIndex,
+					data  : data
+				});
 			},
 			error: function (xhr) {
 				$trigger.waiting('hide');
@@ -1243,8 +1288,23 @@ window.Form.inited = function () {
 		});
 	};
 
-	GridForm.prototype.refresh = function () {
-		this.$grid.reload();
+	GridForm.prototype.refresh = function (options) {
+		var scope = (options.scope == JSEA.Constants.SCOPE_DEFAULT) ? JSEA.Constants.SCOPE_GRID : options.scope;
+		var data  = options.data;
+		switch (scope) {
+			case JSEA.Constants.SCOPE_NONE:
+				this.$grid.setRowData(options.row, data);
+				break;
+			case JSEA.Constants.SCOPE_GRID:
+				this.$grid.reload();
+				break;
+			case JSEA.Constants.SCOPE_ROW:
+				this.$grid.refreshRow(options.row, data);
+				break;
+			case JSEA.Constants.SCOPE_CELL:
+				this.$grid.refreshCell(options.row, options.cell, data);
+				break;
+		}
 	};
 
 	GridForm.prototype.getProperty = function (propName) {
@@ -1359,14 +1419,6 @@ window.Form.inited = function () {
 
 	LookupForm.prototype.constructor = LookupForm;
 
-	LookupForm.prototype.resolveSearchUrl = function (url) {
-		return this.resolveOperationUrl({ name : 'search', url : url, more : 'lookup' });
-	};
-
-	LookupForm.prototype.buildGridUrl = function () {
-		return this.resolveOperationUrl({ name : 'list', more : 'lookup' });
-	};
-
 	LookupForm.prototype.moreGridParams = function () {
 		return this.options.args;
 	};
@@ -1377,7 +1429,7 @@ window.Form.inited = function () {
 
 	LookupForm.prototype.onGridSelect = function (rowIndex, rowData) { };
 
-	LookupForm.prototype.choose = function ($trigger, opname, url, params) {
+	LookupForm.prototype.choose = function ($trigger, operation) {
 		var $this = this;
 		var sectionData = $this.$grid.getSectionData();
 		if(!$.isArray(sectionData)) sectionData = [sectionData];
