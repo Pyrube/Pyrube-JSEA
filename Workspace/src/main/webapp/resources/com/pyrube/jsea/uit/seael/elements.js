@@ -57,7 +57,7 @@
 		this.initElement();
 		// resolve the method of this element
 		this.resolveMethod();
-		// initialize default events of this element
+		// initialize default/concrete events of this element
 		this.initDefaultEvents();
 		//this.initEvents();
 	};
@@ -83,6 +83,7 @@
 			this.afterMethodResolved(this.event0);
 		}
 	};
+
 	Element.prototype.afterMethodResolved = function (event0) { };
 
 	Element.prototype.initDefaultEvents = function () {
@@ -542,14 +543,19 @@ var IconBuilder = {
 			.attr('href', this.options.href || 'javascript:void(0);');
 		if (!this.$element.hasClass('lnk')) {
 			this.$element.addClass('lnk')
-				.addClass(this.options.icon || this.options.name)
+				.addClass(this.options.icon)
+				.addClass(this.options.name)
 				.attr('title', (this.options.name) ? JSEA.localizeMessage('link.alt.' + this.options.name) : '')
 				.append($(document.createElement('SPAN'))
 						.addClass(this.options.icon || this.options.name))
 				.append($(document.createElement('EM'))
 						.text(JSEA.localizeMessage(this.options.text || 'link.text.' + this.options.name)));
 		}
+		// initialize concrete link element
+		this.initLink();
 	};
+
+	Link.prototype.initLink = function () { };
 
 	Link.prototype.getDefaults = function () {
 		return Link.DEFAULTS;
@@ -603,6 +609,26 @@ var IconBuilder = {
 		});
 	}
 
+	// LINK REUSE METHOD EXTENDS ELEMENT
+	// ===================================
+
+	Plugin.prototype = $.extend({}, $.fn.element.prototype);
+
+	Plugin.prototype.postOptions = function () {
+		var postOptions = {};
+		this.each(function () {
+			var $this   = $(this);
+			var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+			postOptions = {
+				name     : data.options.name,
+				url      : data.options.url,
+				mode     : data.options.mode
+			}
+			return false;
+		});
+		return postOptions;
+	};
+
 	var old = $.fn.link;
 
 	$.fn.link             = Plugin;
@@ -638,3 +664,115 @@ var LinkBuilder = {
 		return $(document.createElement(JSEA.Constants.TAG_LINK)).link(options);
 	}
 };
+
+
+/**
+ * JSEA On-off element extends Link element
+ * The On-off object has following data:
+ * name. onoff name (string)
+ * method. click to invoke (function)
+ * 
+ * @author Aranjuez
+ * @version Dec 01, 2009
+ * @since Pyrube-JSEA 1.0
+ * @dependence: jQuery: jquery.js v1.11.3
+ */
++function ($) {
+	'use strict';
+
+	// LINK.ONOFF PUBLIC CLASS DEFINITION
+	// ====================================
+
+	var Onoff = function (element, options) {
+		this.init('link.onoff', element, options);
+	};
+
+	Onoff.VERSION  = '1.0.0';
+
+	Onoff.DEFAULTS = $.extend({}, $.fn.link.Constructor.DEFAULTS, {
+		icon       : 'onoff',
+		name       : 'toggle',
+		on         : true,
+		method     : function () { this.toggle(); },
+		onToggle   : null
+	});
+
+	// NOTE: LINK.ONOFF EXTENDS ELEMENT
+	// ==================================
+
+	Onoff.prototype = $.extend({}, $.fn.link.Constructor.prototype);
+
+	Onoff.prototype.constructor = Onoff;
+
+	Onoff.prototype.initLink = function () {
+		this.$element.addClass(this.options.on ? 'on' : 'off');
+	};
+
+	Onoff.prototype.toggle = function (on) {
+		if (on === undefined) on = !this.options.on;
+		(this.options.on = on) 
+			? this.$element.removeClass('off').addClass('on')
+			: this.$element.removeClass('on').addClass('off');
+		var fnToggle = this.options.onToggle;
+		if ($.isFunction(fnToggle)) {
+			fnToggle.apply(this.$element.data('jsea.plugin'), [on]);
+		}
+		this.$element.trigger('toggle');
+	};
+
+	Onoff.prototype.isOn = function () {
+		return this.options.on;
+	};
+
+	Onoff.prototype.getDefaults = function () {
+		return Onoff.DEFAULTS;
+	};
+
+	// LINK.ONOFF PLUGIN DEFINITION
+	// ==============================
+
+	function Plugin(option) {
+		var self = this;
+
+		// LINK.ONOFF PUBLIC METHOD EXTENDS LINK
+		// ==========================================
+
+		this.extend($.fn.element.prototype);
+
+		self.toggle = function (on) {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.link.onoff');
+				data.toggle(on);
+			});
+		};
+
+		return this.each(function () {
+			var $this   = $(this);
+			var plugin  = $this.data('jsea.plugin');
+			var data    = $this.data('jsea.link.onoff');
+			var options = typeof option == 'object' && option;
+
+			if (!plugin) $this.data('jsea.plugin', self);
+
+			if (!data && /destroy|hide/.test(option)) return;
+			if (!data) $this.data('jsea.link.onoff', (data = new Onoff(this, options)));
+			if (typeof option == 'string') data[option]();
+		});
+	}
+
+	var old = $.fn.link;
+
+	$.fn.onoff             = Plugin;
+	$.fn.onoff.Constructor = Onoff;
+
+
+	// LINK.ONOFF NO CONFLICT
+	// ========================
+
+	$.fn.onoff.noConflict = function () {
+		$.fn.onoff = old;
+		return this;
+	};
+
+} (jQuery);
