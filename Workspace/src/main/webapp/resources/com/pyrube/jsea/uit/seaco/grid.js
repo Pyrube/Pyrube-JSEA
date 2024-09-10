@@ -115,6 +115,9 @@
 		},
 		converters : {},
 		DEFAULT_CONVERTERS : {
+			raw      : function (value, arg, argParams, column) {
+				return value;
+			},
 			text     : function (value, arg, argParams, column) {
 				if (value == null) {
 					this.text('');
@@ -186,13 +189,23 @@
 								.appendTo(this.empty());
 				return $image;
 			},
-			amount   : function (value, arg, argParams, column) {
-				var rowData = this.closest(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).data(Grid.Constants.OBJATTR_ROW_DATA);
-				var ccyCode = (column.ccyProp != null) ? JSEA.Jsons.formatProperty(rowData, column.ccyProp) : null;
-				var fmtName = (ccyCode != null || column.format == null) ? Numbers.resolveCurrencyFormat(ccyCode) : column.format;
-				var amtLabel = Numbers.format(value, fmtName);
-				this.text(amtLabel);
-				return amtLabel;
+			number   : function (value, arg, argParams, column) {
+				if (value == null) {
+					this.text('');
+					return null;
+				}
+				var numLabel = Numbers.format(value, column.format);
+				this.text(numLabel);
+				return numLabel;
+			},
+			money    : function (value, arg, argParams, column) {
+				if (value == null) {
+					this.text('');
+					return null;
+				}
+				var mnyLabel = Numbers.groupAmount(value, arg);
+				this.text(mnyLabel);
+				return mnyLabel;
 			},
 			date     : function (value, arg, argParams, column) {
 				if (value == null) {
