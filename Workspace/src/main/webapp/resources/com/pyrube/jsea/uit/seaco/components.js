@@ -2580,23 +2580,499 @@ PagebarFactory.newInstance = function (options) {
 	Chart.VERSION  = '1.0.0';
 
 	Chart.DEFAULTS = {
-		type    : 'bar',
-		data    : null,
-		xaxis   : null,
-		yaxis   : null
+		url     : null,
+		title   : null,
+		type    : 'BAR',
+		padding : 5,
+		xmlns   : 'http://www.w3.org/2000/svg',
+		base    : { x : 0, y : 0},
+		dataset : [{
+			label  : null, // legend label. it is an i18n key.
+			format : null,
+			ccy    : null, // currency code. string
+			data   : []
+		}],
+		xaxis   : {
+			name       : null, // unit name/name of axis. it is an i18n key. show it at the end if any
+			ticks      : null, // an array of ticks. it could be i18n keys
+			label      : null, // axis label. it is an i18n key. tick will be a parameter of its if any
+			format     : null
+		},
+		yaxis   : {
+			name       : null, // unit name/name of axis. it is an i18n key. show it at the end if any
+			ticks      : null,
+			format     : null,
+			ccy        : null, // currency code. string
+			unit       : null, // tick unit. it could be an i18n key.
+			base       : 0,
+			tickval    : 0,
+			end        : 0,
+			max        : 0
+		},
+		legend  : {
+			position   : 'top',
+			width      : 16,
+			spacing    : 12,
+			padding    : 20
+		}
 	};
-	
+
 	Chart.prototype.init = function (type, element, options) {
 		this.type      = type;
 		this.$element  = $(element);
 		this.options   = this.getOptions(options);
 		
+		this.initComponent();
+	};
+
+	Chart.prototype.initComponent = function () {
+		this.$canvas = $(document.createElement('SVG'))
+							.attr('xmlns', this.options.xmlns)
+							.appendTo(this.$element);
 		this.$element.addClass('chart-container');
-		
+		// load chart data
+		this.load();
 	};
 	
+	Chart.prototype.load = function () {
+		var $this = this;
+		$.ajax({
+			url: JSEA.getPageContext().resolveUrl(this.options.url),
+			type: 'get',
+			dataType: "json",
+			beforeSend: function () {
+				$this.$element.waiting();
+			},
+			success: function (chart) {
+				$this.options.dataset = chart.dataset;
+				$this.options.xaxis   = chart.xaxis || $this.options.xaxis;
+				$this.options.yaxis   = chart.yaxis || $this.options.yaxis;
+				$this.options.title   = chart.title;
+				$this.drawComponent();
+				$this.$element.waiting('hide');
+			},
+			error: function () {
+				$this.$element.waiting('hide');
+			}
+		});
+	};
+
+	Chart.prototype.initDefaultEvents = function () {
+		this.$element.off('.jsea').on('mouseenter.jsea', '.tip-owner, .tooltip', function (evt) {
+			evt       = evt || window.event;
+			var $this = $(this);
+			var $text = $this.parent().find('.tooltip');
+			var clz   = $text.attr('class') || '';
+			if ((' ' + clz + ' ').indexOf(' hidden ') >= 0) {
+				$text.attr('class', clz.split(' ').filter(item => { return item != 'hidden'; }).join(' '));
+			}
+			// event stopper
+			evt.preventDefault && evt.preventDefault();
+			evt.returnValue = false;
+			evt.stopPropagation && evt.stopPropagation();
+			evt.cancelBubble = false;
+			return false;
+		}).on('mouseleave.jsea', '.tip-owner, .tooltip', function (evt) {
+			evt       = evt || window.event;
+			var $this = $(this);
+			var $text = $this.parent().find('.tooltip');
+			var clz   = $text.attr('class') || '';
+			if ((' ' + clz + ' ').indexOf(' hidden ') < 0) {
+				$text.attr('class', clz + ' hidden');
+			}
+			// event stopper
+			evt.preventDefault && evt.preventDefault();
+			evt.returnValue = false;
+			evt.stopPropagation && evt.stopPropagation();
+			evt.cancelBubble = false;
+			return false;
+		});
+	};
+
+	Chart.prototype.drawComponent = function () {
+		this.painter = new this[this.options.type.toLowerCase().capitalize() + 'Painter'](this.$canvas, this.options);
+		this.$canvas = this.painter.draw();
+		// draw SVG with innerHTML
+		this.$element.empty()
+			.html(this.$canvas.prop("outerHTML"));
+
+		Tipbox.bind(this.$element);
+		// initialize default events
+		this.initDefaultEvents();
+	};
+
+	// CHART.PAINTER INNER CLASS DEFINITION
+	// ======================================
+
+	Chart.prototype.Painter = function ($canvas, chart) { };
+
+	Chart.prototype.Painter.prototype.constructor = Chart.prototype.Painter;
+
+	Chart.prototype.Painter.prototype.init = function ($canvas, chart) {
+		this.$canvas = $canvas;
+		this.chart   = chart;
+		this.width   = this.$canvas.innerWidth();
+		this.height  = this.$canvas.innerHeight();
+	};
+
+	Chart.prototype.Painter.prototype.draw = function () {
+		// calculate first
+		this.calculate()
+		// draw the chart then
+		this.drawXaxis();
+		this.drawYaxis();
+		this.drawBox();
+		this.drawLegend();
+		this.drawTitle();
+		return this.$canvas;
+	};
+
+	Chart.prototype.Painter.prototype.calculate  = null;
+	Chart.prototype.Painter.prototype.drawXaxis  = null;
+	Chart.prototype.Painter.prototype.drawYaxis  = null;
+	Chart.prototype.Painter.prototype.drawBox    = null;
+
+	Chart.prototype.Painter.prototype.drawLegend = function () {
+		var $legend = $(document.createElement('G'))
+							.addClass('legend')
+							.addClass(this.chart.legend.position)
+							.appendTo(this.$canvas);
+		var dataset = this.chart.dataset;
+		for (var i = 0; i < dataset.length; i++) {
+			var $pair = $(document.createElement('G')).appendTo($legend);
+			var $bar  = $(document.createElement('RECT'))
+							.attr('x', (this.chart.legend.width + this.chart.legend.spacing) * i)
+							.attr('y', - this.chart.legend.padding)
+							.addClass('bar')
+							.addClass('_' + (i + 1))
+							.appendTo($pair);
+			$(document.createElement('TEXT'))
+							.attr('x', (this.chart.legend.width + this.chart.legend.spacing) * i)
+							.attr('y', - this.chart.legend.padding)
+							.addClass('label')
+							.addClass('_' + (i + 1))
+							.text(JSEA.localizeMessage(dataset[i].label))
+							.appendTo($pair);
+		}
+		return $legend;
+	};
+
+	Chart.prototype.Painter.prototype.drawTitle = function () {
+		var $title = $(document.createElement('G'))
+							.addClass('title')
+							.appendTo(this.$canvas);
+		$(document.createElement('TEXT'))
+							.attr('x', '50%')
+							.attr('y', '110%')
+							.text(JSEA.localizeMessage(this.chart.title))
+							.appendTo($title);
+		return $title;
+	};
+
+	// CHART.PAINTER.BAR EXTENDS CHART.PAINTER
+	// =========================================
+
+	Chart.prototype.BarPainter = function ($canvas, chart) {
+		this.init($canvas, chart);
+	};
+
+	Chart.prototype.BarPainter.prototype = $.extend({}, Chart.prototype.Painter.prototype);
+
+	Chart.prototype.BarPainter.prototype.constructor = Chart.prototype.BarPainter;
+
+	Chart.prototype.BarPainter.prototype.calculate = function () {
+		var all = [];
+		for (var i = 0; i < this.chart.dataset.length; i++) {
+			all = all.concat(this.chart.dataset[i].data);
+		}
+		this.chart.yaxis.max      = Math.max.apply(null, all);
+		this.chart.yaxis.end      =  this.chart.yaxis.base;
+		this.chart.yaxis.ticks    = [this.chart.yaxis.end];
+		while (this.chart.yaxis.end < this.chart.yaxis.max) {
+			this.chart.yaxis.end += this.chart.yaxis.tickval;
+			this.chart.yaxis.ticks.push(this.chart.yaxis.end);
+		}
+	};
+
+	Chart.prototype.BarPainter.prototype.drawXaxis = function () {
+		var $xaxis = $(document.createElement('G'))
+							.addClass('xaxis')
+							.appendTo(this.$canvas);
+		// base tick
+		$(document.createElement('G'))
+			.append($(document.createElement('LINE'))
+							.attr('x1', this.chart.base.x)
+							.attr('x2', this.chart.base.x)
+							.attr('y1', this.chart.base.y)
+							.attr('y2', this.height))
+			.appendTo($xaxis);
+		var ticks = this.chart.xaxis.ticks;
+		var label = this.chart.xaxis.label;
+		this.chart.xaxis.ticklen = Decimal.valueOf(this.width).divides(ticks.length).toNumber();
+		for (var i = 0; i < ticks.length; i++) {
+			$(document.createElement('G'))
+				.append($(document.createElement('LINE'))
+							.attr('x1', this.chart.xaxis.ticklen * (i + 1))
+							.attr('x2', this.chart.xaxis.ticklen * (i + 1))
+							.attr('y1', this.height)
+							.attr('y2', this.height + this.chart.padding))
+				.append($(document.createElement('TEXT'))
+							.text((label) ? JSEA.localizeMessage(label, ticks[i]) : JSEA.localizeMessage(ticks[i]))
+							.attr('x', this.chart.xaxis.ticklen * (i + 1))
+							.attr('y', this.height))
+				.appendTo($xaxis);
+		}
+		return $xaxis;
+	}
+
+	Chart.prototype.BarPainter.prototype.drawYaxis = function () {
+		var $yaxis = $(document.createElement('G'))
+							.addClass('yaxis')
+							.appendTo(this.$canvas);
+		var ticks  = this.chart.yaxis.ticks.reverse();
+		var format = this.chart.yaxis.format;
+		var ccy    = this.chart.yaxis.ccy;
+		var unit   = this.chart.yaxis.unit;
+		this.chart.yaxis.ticklen = Decimal.valueOf(this.height).divides(ticks.length - 1).toNumber();
+		for (var i = 0; i < ticks.length; i++) {
+			$(document.createElement('G'))
+				.append($(document.createElement('TEXT'))
+							.text((format) ? JSEA.Constants.FORMATTERS[format](ticks[i], (ccy || unit || undefined)) : ticks[i])
+							.attr('x', - this.chart.padding)
+							.attr('y', this.chart.yaxis.ticklen * i))
+				.append($(document.createElement('LINE'))
+							.attr('x1', this.chart.base.x)
+							.attr('x2', this.width)
+							.attr('y1', this.chart.yaxis.ticklen * i)
+							.attr('y2', this.chart.yaxis.ticklen * i))
+				.appendTo($yaxis);
+		}
+		return $yaxis;
+	};
+
+	Chart.prototype.BarPainter.prototype.drawBox = function () {
+		var $box    = $(document.createElement('G'))
+							.addClass('box')
+							.appendTo(this.$canvas);
+		var dataset = this.chart.dataset;
+		var barL    = this.locateFirstBar();
+		for (var i = 0; i < dataset.length; i++) {
+			var $bars = $(document.createElement('G')).appendTo($box);
+			for (var j = 0; j < dataset[i].data.length; j++) {
+				// ((value - base) / (end - base)) * height
+				var barH = Decimal.valueOf(dataset[i].data[j] - this.chart.yaxis.base)
+									.divides(this.chart.yaxis.end - this.chart.yaxis.base).multiplies(this.height).toNumber();
+				var barS = barL.s + this.chart.xaxis.ticklen * j + barL.w * i;
+				var format = dataset[i].format;
+				var ccy    = dataset[i].ccy;
+				var value  = dataset[i].data[j];
+				$(document.createElement('G'))
+					.append($(document.createElement('RECT'))
+							.attr('x', barS)
+							.attr('y', this.height - barH)
+							.attr('rx', 8)
+							.attr('width', barL.w)
+							.attr('height', barH)
+							.attr(JSEA.Constants.ATTR_TOOLTIPS, value)
+							.addClass('tip-owner')
+							.addClass('bar')
+							.addClass('_' + (i + 1)))
+					.append($(document.createElement('TEXT'))
+							.attr('x', barS + barL.w / 2)
+							.attr('y', this.height - barH)
+							.addClass('tooltip')
+							.addClass('hidden')
+							.text((format) ? JSEA.Constants.FORMATTERS[format](value, (ccy || undefined)) : value))
+					.appendTo($bars);
+			}
+		}
+		return $box;
+	};
+
+	Chart.prototype.BarPainter.prototype.locateFirstBar = function () {
+		var dataset = this.chart.dataset;
+		var percent = 0.1;
+		switch (dataset.length) {
+			case 1: percent = 0.5;  break;
+			case 2: percent = 0.3;  break;
+			case 3: percent = 0.25; break;
+			case 4: percent = 0.2;  break;
+			case 5: percent = 0.15; break;
+		}
+		var xTicklen = this.chart.xaxis.ticklen;
+		var w = Decimal.valueOf(xTicklen).multiplies(percent).toNumber();
+		var s = Decimal.valueOf(xTicklen).subtracts(Decimal.valueOf(w).multiplies(dataset.length).toNumber()).divides(2).toNumber();
+		return { w : w, s : s };
+	};
+
+	// CHART.PAINTER.LINE EXTENDS CHART.PAINTER.BAR
+	// ==============================================
+
+	Chart.prototype.LinePainter = function ($canvas, chart) {
+		this.init($canvas, chart);
+	};
+
+	Chart.prototype.LinePainter.prototype = $.extend({}, Chart.prototype.BarPainter.prototype);
+
+	Chart.prototype.LinePainter.prototype.constructor = Chart.prototype.LinePainter;
+
+	Chart.prototype.LinePainter.prototype.drawBox = function () {
+		var $box    = $(document.createElement('G'))
+							.addClass('box')
+							.appendTo(this.$canvas);
+		var dataset = this.chart.dataset;
+		var dotL    = this.locateFirstDot();
+		for (var i = 0; i < dataset.length; i++) {
+			var $dots = $(document.createElement('G')).appendTo($box);
+			var points = [];
+			var $line = $(document.createElement('POLYLINE'))
+							.addClass('tip-owner')
+							.addClass('line')
+							.addClass('_' + (i + 1))
+							.appendTo($dots);
+			for (var j = 0; j < dataset[i].data.length; j++) {
+				// ((value - base) / (end - base)) * height
+				var dotCy = Decimal.valueOf(dataset[i].data[j] - this.chart.yaxis.base)
+									.divides(this.chart.yaxis.end - this.chart.yaxis.base).multiplies(this.height).toNumber();
+				var dotCx = dotL.cx + Decimal.valueOf(this.chart.xaxis.ticklen).multiplies(j).toNumber();
+				var format = dataset[i].format;
+				var ccy    = dataset[i].ccy;
+				var value  = dataset[i].data[j];
+				$(document.createElement('G'))
+					.append($(document.createElement('CIRCLE'))
+							.attr('cx', dotCx)
+							.attr('cy', this.height - dotCy)
+							.attr('r', dotL.r)
+							.attr(JSEA.Constants.ATTR_TOOLTIPS, value)
+							.addClass('tip-owner')
+							.addClass('dot')
+							.addClass('_' + (i + 1)))
+					.append($(document.createElement('TEXT'))
+							.attr('x', dotCx)
+							.attr('y', this.height - dotCy)
+							.addClass('tooltip')
+							.addClass('hidden')
+							.text((format) ? JSEA.Constants.FORMATTERS[format](value, (ccy || undefined)) : value))
+					.appendTo($dots);
+				points.push(dotCx + ',' + (this.height - dotCy));
+			}
+			$line.attr('points', points.join(' '))
+		}
+		return $box;
+	};
+
+	Chart.prototype.LinePainter.prototype.locateFirstDot = function () {
+		var dataset = this.chart.dataset;
+		var percent = 0.05;
+		var xTicklen = this.chart.xaxis.ticklen;
+		var r  = Decimal.valueOf(xTicklen).multiplies(percent).toNumber();
+		var cx = Decimal.valueOf(xTicklen).divides(2).toNumber();
+		return { r : r, cx : cx };
+	};
+
+	// CHART.PAINTER.PIE EXTENDS CHART.PAINTER
+	// =========================================
+
+	Chart.prototype.PiePainter = function ($canvas, chart) {
+		this.init($canvas, chart);
+	};
+
+	Chart.prototype.PiePainter.prototype = $.extend({}, Chart.prototype.Painter.prototype);
+
+	Chart.prototype.PiePainter.prototype.constructor = Chart.prototype.PiePainter;
+
+	Chart.prototype.PiePainter.prototype.calculate = function () {
+		// the base point - center of circle
+		this.chart.base = {
+			x : this.width / 2,
+			y : this.height / 2
+		};
+		this.radius   = Math.min(this.chart.base.x, this.chart.base.y) * 0.8;
+		// sub-totals
+		var subtotals = [];
+		var dataset   = this.chart.dataset;
+		for (var i = 0; i < dataset.length; i++) {
+			for (var j = 0; j < dataset[i].data.length; j++) {
+				subtotals[j] = subtotals[j] || 0;
+				subtotals[j] += dataset[i].data[j];
+			}
+		}
+		this.chart.xaxis.subtotals = subtotals;
+	};
+
+	Chart.prototype.PiePainter.prototype.drawXaxis = function () { return null; };
+
+	Chart.prototype.PiePainter.prototype.drawYaxis = function () { return null; };
+
+	Chart.prototype.PiePainter.prototype.drawBox = function () {
+		var $box    = $(document.createElement('G'))
+							.addClass('box')
+							.appendTo(this.$canvas);
+		var dataset = this.chart.dataset;
+		var subtotals = this.chart.xaxis.subtotals;
+		var ringW   = Decimal.valueOf(this.radius).divides(subtotals.length).toNumber();
+		for (var j = 0; j < subtotals.length; j++) {
+			var $ring  = $(document.createElement('G')).appendTo($box);
+			var angle0 = 0;
+			for (var i = 0; i < dataset.length; i++) {
+				var angle = 360 * dataset[i].data[j] / subtotals[j];
+				var piece = this.locatePath(this.radius - ringW * j, angle0, angle0 + angle);
+				angle0   += angle;
+				var format = dataset[i].format;
+				var ccy    = dataset[i].ccy;
+				var value  = dataset[i].data[j];
+				$(document.createElement('G'))
+					.append($(document.createElement('PATH'))
+							.attr('d', piece.d.join(' '))
+							.attr(JSEA.Constants.ATTR_TOOLTIPS, value)
+							.addClass('tip-owner')
+							.addClass('pie')
+							.addClass('_' + (i + 1)))
+					.append($(document.createElement('TEXT'))
+							.attr('x', piece.x)
+							.attr('y', piece.y)
+							.addClass('tooltip')
+							.addClass('hidden')
+							.text((format) ? JSEA.Constants.FORMATTERS[format](value, (ccy || undefined)) : value))
+					.appendTo($ring);
+			}
+			Tipbox.bind($ring);
+		}
+		return $box;
+	};
+
+	Chart.prototype.PiePainter.prototype.locatePath = function (radius, angle0, angle1) {
+		var d  = [];
+		var bx = this.chart.base.x,
+			by = this.chart.base.y;
+		var dist0 = this.calcAngleDist(angle0);
+		var { x : x1, y : y1 } = { 
+				x : bx + radius * Math.sin(dist0),
+				y : by - radius * Math.cos(dist0)
+			};
+		d.push(`M ${bx} ${by} L ${x1} ${y1}`);
+		var dist1 = this.calcAngleDist(angle1);
+		var { x : x2, y : y2 } = { 
+				x : bx + radius * Math.sin(dist1),
+				y : by - radius * Math.cos(dist1)
+			};
+		d.push(`A ${radius} ${radius} 0 ${angle1 - angle0 > 180 ? 1 : 0} 1 ${x2} ${y2}`);
+		d.push('Z');
+		var dist = this.calcAngleDist(angle0 + (angle1 - angle0) / 2);
+		return {
+			d : d,
+			x : bx + radius * Math.sin(dist),
+			y : by - radius * Math.cos(dist)
+		};
+	};
+
+	Chart.prototype.PiePainter.prototype.calcAngleDist = function (angle) {
+		return Decimal.valueOf(angle).multiplies(Math.PI).divides(180).toNumber();
+		//return angle * Math.PI / 180;
+	};
+
 	Chart.prototype.getDefaults = function () {
-		return Scrolling.DEFAULTS;
+		return Chart.DEFAULTS;
 	};
 
 	Chart.prototype.getOptions = function (options) {
