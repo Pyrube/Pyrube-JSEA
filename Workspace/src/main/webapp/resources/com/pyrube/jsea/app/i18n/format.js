@@ -106,6 +106,9 @@
 		var format = Format.dateFormatOf(localeCode, nameOrPattern);
 		return format.format(date);
 	};
+	Dates.format.date           = function (date) { Dates.format(date, JSEA.Constants.FORMATS.date); };
+	Dates.format.timestamp      = function (date) { Dates.format(date, JSEA.Constants.FORMATS.timestamp); };
+	Dates.format.longTimestampZ = function (date) { Dates.format(date, JSEA.Constants.FORMATS.longTimestampZ); };
 
 	/**
 	 * returns a <code>Date</code> of now
@@ -348,19 +351,36 @@
 		var format = Format.numberFormatOf(localeCode, nameOrPattern);
 		return format.format(number);
 	};
-	
+	Numbers.format.amount = function (number) { Numbers.format(number, JSEA.Constants.FORMATS.amount); };
+
 	/**
-	 * formats the given <code>Number</code> into a money string
+	 * formats the given <code>Number</code> into a money string with group separator
 	 * @param number
 	 * @param ccyCode the currency code
 	 */
-	Numbers.formatMoney = function (number, ccyCode) {
+	Numbers.groupAmount = function (number, ccyCode) {
 		var localeCode = JSEA.getPageContext().getLocale();
 		var formatName = Numbers.resolveCurrencyFormat(ccyCode);
 		var format = Format.numberFormatOf(localeCode, formatName);
 		return format.format(number);
 	};
-	
+
+	/**
+	 * group the amount of a given <code>Amountfield</code>
+	 * @param field the HTML element
+	 * @param ccyCode the currency code
+	 */
+	Numbers.groupField = function (field, ccyCode) {
+		if (field == null) return null;
+		var localeCode = JSEA.getPageContext().getLocale();
+		var formatName = Numbers.resolveCurrencyFormat(ccyCode);
+		var format = Format.numberFormatOf(localeCode, formatName);
+		var $field = $(field);
+		var number = format.parse($field.val());
+		$field.val(format.format(number));
+		return $field.val();
+	};
+
 	/**
 	 * ungroup the amount of a given <code>Amountfield</code>
 	 * @param field the HTML element
@@ -377,23 +397,40 @@
 		$field.select();
 		return $field.val();
 	};
-	
+
 	/**
-	 * group the amount of a given <code>Amountfield</code>
-	 * @param field the HTML element
-	 * @param ccyCode the currency code
+	 * formats the given <code>Number</code> into a number string with number place in words
+	 * @param number
+	 * @param unit the number unit
 	 */
-	Numbers.groupField = function (field, ccyCode) {
-		if (field == null) return null;
-		var localeCode = JSEA.getPageContext().getLocale();
-		var formatName = Numbers.resolveCurrencyFormat(ccyCode);
-		var format = Format.numberFormatOf(localeCode, formatName);
-		var $field = $(field);
-		var number = format.parse($field.val());
-		$field.val(format.format(number));
-		return $field.val();
+	Numbers.wordizePlace = function (number, unit) {
+		var formatted  = Numbers.format(number, JSEA.Constants.FORMATS.piw);
+			formatted  =  (formatted.indexOf(JSEA.Constants.FORMATS.decimalSeparator) >= 0) // take decimal separator place with ${u}
+						?  formatted.replace(eval("/\\" + JSEA.Constants.FORMATS.decimalSeparator + "/g"), '${u}') 
+						: (formatted + '${u}');
+		var replaced   = formatted.replace(/0{1}\$\{p\d{1}\}/g, '${ph}') // replace 0${pn} with a place-holder ${ph}
+								.replace(eval("/\}(\\$\\{ph\\}){" + JSEA.Constants.FORMATS.periodLength + "}\\$\\{(g|u){1}\\d?/g"), '') // remove all-0/${ph} period
+								.replace(/\$\{ph\}/g, (number === 0) ? '0' : ''); // remove the rest 0/${ph} 
+		return Numbers.localizePlace(replaced, unit);
 	};
-	
+
+	/**
+	 * localize the number place with string template
+	 * @param template
+	 * @param unit the number unit
+	 */
+	Numbers.localizePlace = function (template, unit) {
+		var p1 = JSEA.localizeMessage('number.place.ones');
+		var p2 = JSEA.localizeMessage('number.place.tens');
+		var p3 = JSEA.localizeMessage('number.place.hundreds');
+		var p4 = JSEA.localizeMessage('number.place.thousands');
+		var g1 = JSEA.localizeMessage('number.place.g1');
+		var g2 = JSEA.localizeMessage('number.place.g2');
+		var g3 = JSEA.localizeMessage('number.place.g3');
+		var u  = JSEA.localizeMessage(unit);
+		return eval('`' + template + '`');
+	};
+
 	/**
 	 * resolve currency format
 	 * @param ccyCode the currency code. e.g. CNY, USD
@@ -514,17 +551,20 @@
 		var len = decStr.length - 1;
 		for (var i = fmtStr.length - 1; i >= 0 ; i--) {
 			switch(fmtStr.substr(i, 1)) {
-			case '#':
-				if (len >= 0) string = decStr.substr(len--, 1) + string;
-				break;
-			case '0':
-				if (len >= 0) string = decStr.substr(len--, 1) + string;
-				else string = '0' + string;
-				break;
-			case ',' :
-				flag = true;
-				string = ',' + string;
-				break;
+				case '#' :
+					if (len >= 0) string = decStr.substr(len--, 1) + string;
+					break;
+				case '0' :
+					if (len >= 0) string = decStr.substr(len--, 1) + string;
+					else string = '0' + string;
+					break;
+				case ',' :
+					flag = true;
+					string = ',' + string;
+					break;
+				default  :
+					if (len >= 0) string = fmtStr.substr(i, 1) + string;
+					break;
 			}
 		}
 		if (len >= 0) {
@@ -543,13 +583,13 @@
 		len = 0;
 		for (var i = 0; i < fmtStr.length; i++) {
 			switch (fmtStr.substr(i, 1)) {
-			case '#':
-				if (len < decStr.length) string += decStr.substr(len++, 1);
-				break;
-			case '0':
-				if (len < decStr.length) string += decStr.substr(len++, 1);
-				else string += '0';
-				break;
+				case '#':
+					if (len < decStr.length) string += decStr.substr(len++, 1);
+					break;
+				case '0':
+					if (len < decStr.length) string += decStr.substr(len++, 1);
+					else string += '0';
+					break;
 			}
 		}
 		var sign = "";
@@ -562,27 +602,24 @@
 
 } ();
 
-
 /**
  * override empty formatters
  */ 
-$.extend(JSEA.Constants.FORMATTERS, 
-	{
-		amount         : Numbers.formatMoney,
-		money          : Numbers.formatMoney,
-		date           : Dates.format,
-		timestamp      : Dates.format,
-		longTimestampZ : Dates.format
-	});
-
+$.extend(JSEA.Constants.FORMATTERS, {
+	amount         : Numbers.format.amount,
+	money          : Numbers.groupAmount,
+	piw            : Numbers.wordizePlace,
+	date           : Dates.format.date,
+	timestamp      : Dates.format.timestamp,
+	longTimestampZ : Dates.format.longTimestampZ
+});
 /**
  * override empty parsers
  */ 
-$.extend(JSEA.Constants.PARSERS, 
-	{
-		amount         : Numbers.parse,
-		money          : Numbers.parse,
-		date           : Dates.parse,
-		timestamp      : Dates.parse,
-		longTimestampZ : Dates.parse
-	});
+$.extend(JSEA.Constants.PARSERS, {
+	amount         : Numbers.parse,
+	money          : Numbers.parse,
+	date           : Dates.parse,
+	timestamp      : Dates.parse,
+	longTimestampZ : Dates.parse
+});
