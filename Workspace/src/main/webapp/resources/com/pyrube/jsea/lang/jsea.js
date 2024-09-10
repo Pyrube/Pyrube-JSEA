@@ -423,6 +423,7 @@ JSEA.Constants = {
 	ATTR_STEP_OPTIONS     : 'jsea-step-options',
 	ATTR_LOADING_OPTIONS  : 'jsea-loading-options',
 	ATTR_SCROLLING_OPTIONS : 'jsea-scrolling-options',
+	ATTR_CHART_OPTIONS    : 'jsea-chart-options',
 	ATTR_NAVBAR_OPTIONS   : 'jsea-navbar-options',
 	ATTR_TOOLTIPS         : 'jsea-tooltips',
 	ATTR_VALUE            : 'data-value',
@@ -482,6 +483,7 @@ JSEA.Constants = {
 		'loading'           :  'jsea-loading-options',
 		'scrolling'         :  'jsea-scrolling-options',
 		'navbar'            :  'jsea-navbar-options',
+		'chart'             :  'jsea-chart-options',
 		'validator'         : ['jsea-valid-type', 'jsea-valid-rules']
 	},
 	APP_PROPERTIES        : undefined,
@@ -516,7 +518,9 @@ JSEA.Constants = {
 		'money0'            : "#,##0",
 		'money1'            : "#,##0.0",
 		'money2'            : "#,##0.00",
-		'money3'            : "#,##0.000"
+		'money3'            : "#,##0.000",
+		'periodLength'      : "3",
+		'piw'               : "#${s3}#${p3}#${p2}#${p1}${s2}#${p3}#${p2}#${p1}${s1}#${p3}#${p2}0${p1}.#"
 	},
 	FORMATTERS             : {},  // defined in format.js
 	PARSERS                : {}   // defined in format.js
@@ -563,7 +567,7 @@ JSEA.Jsons = {
 			if (extProp) extValue = obj[extProp];
 			if (extProp && !extValue) extValue = $('#' + extProp).val();
 			if (extProp && !extValue) extValue = extProp;
-			return (JSEA.Constants.FORMATTERS[fmtName](obj[propName], fmtName, extValue));
+			return (JSEA.Constants.FORMATTERS[fmtName](obj[propName], extValue));
 		} else if ((start = prop.indexOf(JSEA.Constants.MAP_TOKEN_START)) > 0) {
 			return (obj[propName.substring(0, start)]);
 		} else {
