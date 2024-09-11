@@ -2755,7 +2755,8 @@
 	Checkbox.prototype.constructor = Checkbox;
 
 	Checkbox.prototype.initField = function () {
-		this.$checkbox = this.$element.parent().find(':checkbox');
+		this.$wrapper  = this.$element.closest('li.element');
+		this.$checkbox = this.$wrapper.find(':checkbox');
 		this.$checkbox.hide();
 		
 		this.$label = this.$element.parent().find('label');
@@ -2777,10 +2778,12 @@
 
 	Checkbox.prototype.setChecked = function (bChecked) {
 		if (bChecked) {
+			this.$wrapper.addClass('checked');
 			this.$checkbox
 				.attr('checked', 'checked')
 				.prop('checked', true);
 		} else {
+			this.$wrapper.removeClass('checked');
 			this.$checkbox
 				.removeAttr('checked')
 				.prop('checked', false);
@@ -3080,14 +3083,14 @@
 	Radio.prototype.constructor = Radio;
 
 	Radio.prototype.initField = function () {
-		var $li = this.$element.parent();
-		this.$radio = $li.find(':radio');
+		this.$wrapper = this.$element.closest('li.element');
+		this.$radio   = this.$wrapper.find(':radio');
 		this.$radio.hide();
 		// build option text
 		var radioValue = this.$radio.val();
 		var i18nPrefix = this.options.i18nPrefix;
 		if (i18nPrefix) {
-			$li.find('label:first').each(function () {
+			this.$wrapper.find('label:first').each(function () {
 				var $option = $(this);
 				if (radioValue && radioValue.length > 0) {
 					$option.text(JSEA.localizeMessage(i18nPrefix + JSEA.Constants.I18N_KEY_SEPARATOR + radioValue));
@@ -3105,11 +3108,13 @@
 	};
 
 	Radio.prototype.setChecked = function (bChecked) {
-		if (bChecked) {						
+		if (bChecked) {
+			this.$wrapper.addClass('checked');
 			this.$radio
 				.attr('checked', 'checked')
 				.prop('checked', true);
 		} else {
+			this.$wrapper.removeClass('checked');
 			this.$radio
 				.removeAttr('checked')
 				.prop('checked', false);
