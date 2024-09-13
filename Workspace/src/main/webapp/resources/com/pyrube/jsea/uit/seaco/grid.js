@@ -311,6 +311,23 @@
 				this.text(''.leftPad(value.length, JSEA.Constants.PASSCHAR_SUBSTITUTE));
 				return value;
 			},
+			percent  : function (value, arg, argParams, column) {
+				if (value == null && arg == null && argParams == null) {
+					this.text('');
+					return null;
+				}
+				if (value != null && arg != null) value = Decimal.valueOf(value).divides(arg).toNumber();
+				if (value == null) value = Decimal.valueOf(arg).divides(argParams[0]).toNumber();
+				var $percentage$   = this.data(Grid.Constants.OBJATTR_ONE_INSTANCE);
+				if ($percentage$  != null) {
+					$percentage$.percentage('setValue', value);
+					return $percentage$;
+				}
+				var $percentage  = $(document.createElement("div")).appendTo(this);
+				var $percentage$ =$percentage.percentage({ value : value });
+				this.data(Grid.Constants.OBJATTR_ONE_INSTANCE, $percentage$);
+				return $percentage$;
+			},
 			rating   : function (value, arg, argParams, column) {
 				if (value == null) {
 					this.text('');
