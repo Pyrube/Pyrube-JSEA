@@ -351,7 +351,13 @@
 		var format = Format.numberFormatOf(localeCode, nameOrPattern);
 		return format.format(number);
 	};
-	Numbers.format.amount = function (number) { Numbers.format(number, JSEA.Constants.FORMATS.amount); };
+	Numbers.format.amount  = function (number) { Numbers.format(number, JSEA.Constants.FORMATS.amount); };
+	Numbers.format.percent = function (number, percision) {
+		var value   = Decimal.valueOf(number).multiplies(100).round(percision = (percision || 0)).toNumber();
+		var pattern = JSEA.Constants.FORMATS['percent' + percision];
+		pattern     = pattern || JSEA.Constants.FORMATS.percent;
+		return Numbers.format(value, pattern);
+	}
 
 	/**
 	 * formats the given <code>Number</code> into a money string with group separator
@@ -359,10 +365,8 @@
 	 * @param ccyCode the currency code
 	 */
 	Numbers.groupAmount = function (number, ccyCode) {
-		var localeCode = JSEA.getPageContext().getLocale();
 		var formatName = Numbers.resolveCurrencyFormat(ccyCode);
-		var format = Format.numberFormatOf(localeCode, formatName);
-		return format.format(number);
+		return Numbers.format(number, formatName);
 	};
 
 	/**
@@ -436,17 +440,17 @@
 	 * @param ccyCode the currency code. e.g. CNY, USD
 	 */
 	Numbers.resolveCurrencyFormat = function (ccyCode) {
-		var scale = Numbers.getCurrencyScale(ccyCode);
-		return "money" + scale;
+		var precision = Numbers.getCurrencyPrecision(ccyCode);
+		return "money" + precision;
 	};
 	
 	/**
-	 * return the scale of the specified currency, or the default currency
+	 * return the precision of the specified currency, or the default currency
 	 * @param ccyCode the currency code. e.g. CNY, USD
 	 */
-	Numbers.getCurrencyScale = function (ccyCode) {
+	Numbers.getCurrencyPrecision = function (ccyCode) {
 		ccyCode = ccyCode || JSEA.Constants.APP_PROPERTIES.APP_CURRENCY_DEFAULT;
-		return (JSEA.Constants.CURRENCIES[ccyCode]) ? JSEA.Constants.CURRENCIES[ccyCode].scale : 2;
+		return (JSEA.Constants.CURRENCIES[ccyCode]) ? JSEA.Constants.CURRENCIES[ccyCode].precision : 2;
 	};
 	
 	/**
@@ -606,6 +610,7 @@
  * override empty formatters
  */ 
 $.extend(JSEA.Constants.FORMATTERS, {
+	percent        : Numbers.format.percent,
 	amount         : Numbers.format.amount,
 	money          : Numbers.groupAmount,
 	piw            : Numbers.wordizePlace,
