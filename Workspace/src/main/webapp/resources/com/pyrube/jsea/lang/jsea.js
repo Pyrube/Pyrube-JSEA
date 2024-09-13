@@ -492,11 +492,11 @@ JSEA.Constants = {
 		CURRENCIES          : ['CNY', 'EUR', 'JPY', 'KWD', 'USD']
 	},
 	CURRENCIES            : {
-		'CNY'               : {scale : 2},
-		'EUR'               : {scale : 0},
-		'JPY'               : {scale : 0},
-		'KWD'               : {scale : 3},
-		'USD'               : {scale : 2}
+		'CNY'               : {precision : 2},
+		'EUR'               : {precision : 0},
+		'JPY'               : {precision : 0},
+		'KWD'               : {precision : 3},
+		'USD'               : {precision : 2}
 	},
 	FORMATS               : {
 		'longTimestampZ'    : "yyyy-MM-dd HH:mm:ss:SSS Z",
@@ -514,6 +514,11 @@ JSEA.Constants = {
 		'amount'            : "#0.00#",
 		'integer'           : "#0",
 		'float'             : "#0.0##############",
+		'percent'           : "#0.#%",
+		'percent0'          : "#0%",
+		'percent1'          : "#0.0%",
+		'percent2'          : "#0.00%",
+		'amount'            : "#0.00%",
 		'money'             : "#,##0.00#",
 		'money0'            : "#,##0",
 		'money1'            : "#,##0.0",
