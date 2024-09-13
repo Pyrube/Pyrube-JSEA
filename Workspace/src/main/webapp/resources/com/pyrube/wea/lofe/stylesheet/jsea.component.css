@@ -7,6 +7,8 @@
 	--bar-arrow-active: #363636;
 	--bar-arrow-disabled: #9C9C9C;
 	--bar-line: #696969;
+	--bar-color: #1F77AA;
+	--bar-color-start: #E5F1FF;
 	--header-color: #EDEDED;
 	--body-color: #FFFFFF;
 	--row1-color: #F7F7F7;
@@ -25,6 +27,8 @@ html[data-theme="DARK"] {
 	--bar-arrow-active: #FFFFFF;
 	--bar-arrow-disabled: #828282;
 	--bar-line: #CFCFCF;
+	--bar-color: #1F77AA;
+	--bar-color-start: #E5F1FF;
 	--header-color: #5D5D5D;
 	--body-color: #4F4F4F;
 	--row1-color: #515151;
@@ -633,6 +637,42 @@ li.message a.close:hover {  }
 	-webkit-border-radius: 5px 0 0 5px;
 	-moz-border-radius: 5px 0 0 5px;
 	border-radius: 5px 0 0 5px;
+}
+
+/** Percentage **/
+.percentage {
+	position: relative;
+	height: 16px; width: 120px;
+	overflow: hidden;
+}
+.percentage .percentage-text {
+	position: absolute;
+	top: 0; left: 0;
+	display: flex;
+	width: 100%; height: 100%;
+	color: var(--jsea-font);
+	font-size: 11px;
+	align-items: center;
+	justify-content: center;
+	cursor: default;
+}
+.percentage .percentage-value {
+	position: absolute;
+	top: 0; left: 0;
+	width: 0; height: 100%;
+	-webkit-transition: width 0.2s ease-in-out;
+	-moz-transition: width 0.2s ease-in-out;
+	-o-transition: width 0.2s ease-in-out;
+	transition: width 0.2s ease-in-out;
+}
+.percentage .percentage-value { 
+	background: -webkit-linear-gradient(to right, var(--bar-color-start) 0%, var(--bar-color) 100%);
+	background: -moz-linear-gradient(to right, var(--bar-color-start) 0%, var(--bar-color) 100%);
+	background: -o-linear-gradient(to right, var(--bar-color-start) 0%, var(--bar-color) 100%);
+	background: linear-gradient(to right, var(--bar-color-start) 0%, var(--bar-color) 100%);
+	-webkit-border-radius: 8px;
+	-moz-border-radius: 8px;
+	border-radius: 8px;
 }
 
 /** Rating-bar **/
