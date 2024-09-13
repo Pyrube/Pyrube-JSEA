@@ -1530,6 +1530,114 @@ PagebarFactory.newInstance = function (options) {
 } (jQuery);
 
 /**
+ * JSEA Percentage component
+ * 
+ * @author Aranjuez
+ * @version Dec 01, 2009
+ * @since Pyrube-JSEA 1.0
+ * @dependence: jQuery: jquery.js v1.11.3
+ */
++function ($) {
+	'use strict';
+
+	// PERCENTAGE PUBLIC CLASS DEFINITION
+	// ====================================
+
+	var Percentage = function (element, options) {
+		this.init('percentage', element, options);
+	};
+
+	Percentage.VERSION  = '1.0.0';
+
+	Percentage.DEFAULTS = {
+		type      : 'BAR',
+		value     : 0, // original value: 0 - 1
+		precision : 0
+	};
+
+	Percentage.prototype.init = function (type, element, options) {
+		this.type      = type;
+		this.$element  = $(element);
+		this.options   = this.getOptions(options);
+
+		// initialize this Percentage
+		this.initComponent();
+	};
+
+	Percentage.prototype.initComponent = function () {
+		this.$element
+			.addClass('percentage')
+			.html('<div class="percentage-value"></div><div class="percentage-text"></div>');
+		this.render(this.options.value);
+	};
+
+	Percentage.prototype.render = function (value) {
+		if (value < 0) value = 0;
+		if (value > 1) value = 1;
+		var percent = Numbers.format.percent(value, this.options.precision);
+		this.$element.find('div.percentage-value').width(percent);
+		this.$element.find('div.percentage-text').html(percent);
+	};
+
+	Percentage.prototype.getValue = function () {
+		return this.options.value;
+	};
+
+	Percentage.prototype.setValue = function (value) {
+		this.options.value = value;
+		this.render(value);
+	};
+
+	Percentage.prototype.getDefaults = function () {
+		return Percentage.DEFAULTS;
+	};
+
+	Percentage.prototype.getOptions = function (options) {
+		options = $.extend({}, this.getDefaults(), options);
+		
+		return options;
+	};
+  
+	// PERCENTAGE PLUGIN DEFINITION
+	// ==============================
+
+	function Plugin(option) {
+		var self = this;
+
+		// PERCENTAGE PUBLIC METHOD DEFINITION
+		// =====================================
+
+		return this.each(function () {
+			var $this   = $(this);
+			var plugin  = $this.data('jsea.plugin');
+			var data    = $this.data('jsea.ratingbar');
+			var options = typeof option == 'object' && option;
+
+			if (!plugin) $this.data('jsea.plugin', self);
+
+			if (!data && /getValue|setValue/.test(option)) return;
+			if (!data) $this.data('jsea.percentage', (data = new Percentage(this, options)));
+			if (typeof option == 'string') data[option]();
+		});
+	}
+
+	var old = $.fn.percentage;
+
+	$.fn.percentage             = Plugin;
+	$.fn.percentage.Constructor = Percentage;
+
+
+	// PERCENTAGE NO CONFLICT
+	// ========================
+
+	$.fn.percentage.noConflict = function () {
+		$.fn.percentage = old;
+		return this;
+	};
+
+} (jQuery);
+
+/**
  * JSEA Rating-bar component
  * 
  * @author Aranjuez
