@@ -16,7 +16,8 @@
  * visible    : indicate whether this field is visible, default is true (boolean)
  * readonly   : indicate whether this field is readonly, default is false (boolean)
  * emptiable  : indicate whether this field is emptiable, default is false (boolean)
- * help       : this field gives detailed help (string)
+ * help       : the help for this field (string)
+ * method     : default event method to invoke for this field (function|json{ event type : function })
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -46,7 +47,8 @@
 		visible    : true,
 		readonly   : false,
 		emptiable  : false,
-		help       : null
+		help       : null,
+		method     : undefined
 	});
 
 	Field.prototype.init = function (type, element, options) {
@@ -84,6 +86,8 @@
 		this.initEmpty();
 		// initialize help of this field
 		this.initHelp();
+		// resolve the method of this field
+		this.resolveMethod();
 		// initialize default events of this field
 		this.initDefaultEvents();
 		// initialize events of this field
@@ -118,6 +122,30 @@
 			);
 		}
 	};
+
+	Field.prototype.resolveMethod = function () {
+		if (this.options.method) {
+			this.event0 = {
+				type    : 'change', // default event type
+				confirm : null,     // whether confirm is required
+				fn      : null      // event method
+			};
+			if ($.isFunction(this.options.method)) {
+				// method is function
+				this.event0.fn = this.options.method;
+			} else {
+				// method is json { evtype : fn }
+				for (var [key, value] of Object.entries(this.options.method)) {
+					this.event0.type = key;
+					this.event0.fn   = value;
+					break; // just handle the first method if it is multiple
+				}
+			}
+			this.afterMethodResolved(this.event0);
+		}
+	};
+
+	Field.prototype.afterMethodResolved = function (event0) { };
 
 	Field.prototype.initDefaultEvents = function () {
 		var $this = this;
@@ -184,6 +212,17 @@
 					var focusFormatter = Page.Rule('format')['focus'][format];
 					if ($.isFunction(focusFormatter)) focusFormatter($this.$element, format, ccyCode);
 				});
+		}
+		// customized method event of this field
+		var event0 = this.event0;
+		if (event0 && $.isFunction(event0.fn)) {
+			this.$element.on(event0.type + '.jsea', function () {
+				if (event0.confirm) {
+					Confirm.request(JSEA.localizeMessage(event0.confirm), function () { event0.fn.apply($this.$element.data('jsea.plugin'), null); })
+				} else {
+					event0.fn.apply($this.$element.data('jsea.plugin'), null);
+				}
+			});
 		}
 	};
 
