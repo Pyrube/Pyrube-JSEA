@@ -11,12 +11,17 @@
 	--option-color-hover: #F0F4FF;
 	--option-color-active: #E5F1FF;
 	--tap-font: #FFFFFF;
+	--tap-font-on: #FFFFFF;
+	--tap-font-off: #333333;
 	--tap-color: #1F77AA;
 	--tap-color-on: #1F77AA;
 	--tap-color-off: #FEFEFE;
 	--tap-color-hover: #2168A5;
 	--tap-color-active: #065BA4;
 	--tap-border: 1px solid #CFCFCF;
+	--field-font: #333333;
+	--field-color: #FFFFFF;
+	--field-border: 1px solid #CFCFCF;
 }
 html[data-theme="DARK"]    {
 	--panel-border: 1px solid #858585;
@@ -28,12 +33,17 @@ html[data-theme="DARK"]    {
 	--option-color-hover: #696969;
 	--option-color-active: #282A2C;
 	--tap-font: #FFFFFF;
+	--tap-font-on: #FFFFFF;
+	--tap-font-off: #FFFFFF
 	--tap-color: #515151;
 	--tap-color-on: #1F77AA;
 	--tap-color-off: #828282;
 	--tap-color-hover: #363636;
 	--tap-color-active: #282A2C;
 	--tap-border: 1px solid #858585;
+	--field-font: #FFFFFF;
+	--field-color: #696969;
+	--field-border: 1px solid #858585;
 }
 
 /* default cursor for disabled/read-only elements */
@@ -52,6 +62,24 @@ a.disabled { cursor: default; }
 
 .uppercase { text-transform: uppercase; }
 .lowercase { text-transform: lowercase; }
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+	-webkit-appearance: none;
+	padding: 0px 5px;
+	color: var(--field-font);
+	background-color: var(--field-color);
+	border: var(--field-border);
+	-webkit-border-radius: 0;
+	-moz-border-radius: 0;
+	border-radius: 0;
+	-webkit-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+	-moz-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+	box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+}
 
 input[type="text"].error,
 input[type="email"].error,
@@ -344,6 +372,37 @@ ul.radios.error { border: var(--jsea-error-border); }
 	ul.radios span.radio:disabled { background-position: -30px 0; cursor: default; }
 	ul.radios span.radio.checked.disabled,
 	ul.radios span.radio.checked:disabled { background-position: -30px -15px; }
+	
+	ul.radios.chips > li {
+		position: relative;
+		min-width: 50px; height: 28px;
+		color: var(--tap-font-off);
+		background-color: var(--tap-color-off);
+		border: var(--tap-border);
+		border-right: none;
+	}
+	ul.radios.chips > li:last-child { border-right: var(--tap-border); }
+	ul.radios.chips > li.checked {
+		color: var(--tap-font-on);
+		background-color: var(--tap-color-on);
+		-webkit-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+		-moz-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+		box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+	}
+	ul.radios.chips > li > label {
+		padding: 4px;
+		position: absolute;
+		top: 0; left: 0;
+		width: 100%; height: 100%;
+		line-height: 18px;
+		text-align: center !important;
+		vertical-align: middle !important;
+		pointer-events: none;
+	}
+	ul.radios.chips > li > span.radio {
+		width: 100%; height: 100%;
+		background-image: none;
+	}
 
 ul.checkboxes { }
 ul.checkboxes.error { border: var(--jsea-error-border); }
@@ -365,6 +424,37 @@ ul.checkboxes.error { border: var(--jsea-error-border); }
 	ul.checkboxes span.checkbox:disabled { background-position: -30px 0; cursor: default; }
 	ul.checkboxes span.checkbox.checked.disabled,
 	ul.checkboxes span.checkbox.checked:disabled { background-position: -30px -15px; }
+	
+	ul.checkboxes.chips > li {
+		position: relative;
+		min-width: 50px; height: 28px;
+		color: var(--tap-font-off);
+		background-color: var(--tap-color-off);
+		border: var(--tap-border);
+		border-right: none;
+	}
+	ul.checkboxes.chips > li:last-child { border-right: var(--tap-border); }
+	ul.checkboxes.chips > li.checked {
+		color: var(--tap-font-on);
+		background-color: var(--tap-color-on);
+		-webkit-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+		-moz-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+		box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+	}
+	ul.checkboxes.chips > li > label {
+		padding: 4px;
+		position: absolute;
+		top: 0; left: 0;
+		width: 100%; height: 100%;
+		line-height: 18px;
+		text-align: center !important;
+		vertical-align: middle !important;
+		pointer-events: none;
+	}
+	ul.checkboxes.chips > li > span.radio {
+		width: 100%; height: 100%;
+		background-image: none;
+	}
 
 /**************************************/
 /******    Other Elements       *******/
