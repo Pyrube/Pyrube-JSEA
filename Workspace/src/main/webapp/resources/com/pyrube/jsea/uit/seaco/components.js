@@ -1552,7 +1552,7 @@ PagebarFactory.newInstance = function (options) {
 	Percentage.DEFAULTS = {
 		type      : 'BAR',
 		value     : 0, // original value: 0 - 1
-		precision : 0
+		scale     : 0
 	};
 
 	Percentage.prototype.init = function (type, element, options) {
@@ -1574,7 +1574,7 @@ PagebarFactory.newInstance = function (options) {
 	Percentage.prototype.render = function (value) {
 		if (value < 0) value = 0;
 		if (value > 1) value = 1;
-		var percent = Numbers.format.percent(value, this.options.precision);
+		var percent = Numbers.format.percent(value, this.options.scale);
 		this.$element.find('div.percentage-value').width(percent);
 		this.$element.find('div.percentage-text').html(percent);
 	};
