@@ -1201,7 +1201,7 @@ window.Form.inited = function () {
 			name   : opname,
 			url    : url,
 			params : params,
-			scope  : (operation.scope !== undefined) ? operation.scope : JSEA.Constants.GRID
+			scope  : (operation.scope !== undefined) ? operation.scope : JSEA.Constants.SCOPE_GRID
 		}));
 	};
 
