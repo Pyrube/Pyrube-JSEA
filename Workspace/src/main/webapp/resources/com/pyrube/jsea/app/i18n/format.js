@@ -352,9 +352,9 @@
 		return format.format(number);
 	};
 	Numbers.format.amount  = function (number) { Numbers.format(number, JSEA.Constants.FORMATS.amount); };
-	Numbers.format.percent = function (number, percision) {
-		var value   = Decimal.valueOf(number).multiplies(100).round(percision = (percision || 0)).toNumber();
-		var pattern = JSEA.Constants.FORMATS['percent' + percision];
+	Numbers.format.percent = function (number, scale) {
+		var value   = Decimal.valueOf(number).multiplies(100).round(scale = (scale || 0)).toNumber();
+		var pattern = JSEA.Constants.FORMATS['percent' + scale];
 		pattern     = pattern || JSEA.Constants.FORMATS.percent;
 		return Numbers.format(value, pattern);
 	}
