@@ -161,13 +161,15 @@
 				return i18nLabel;
 			},
 			icon     : function (value, arg, argParams, column) {
-				if (value == null || value.trim().length == 0) {
+				if (value == null || String(value).trim().length == 0) {
 					this.text('');
 					return '';
 				}
+				var tooltip = (arg == null || String(arg).trim().length == 0) 
+							? (column.i18nPrefix + "." + value) : String(arg).trim();
 				var $icon = $(document.createElement('SPAN'))
-								.addClass(value)
-								.attr(JSEA.Constants.ATTR_TOOLTIPS, column.i18nPrefix + "." + value)
+								.addClass('bg_' + String(value).trim())
+								.attr(JSEA.Constants.ATTR_TOOLTIPS, tooltip)
 								.appendTo(this);
 				Tipbox.bind(this);
 				return $icon;
@@ -1327,14 +1329,23 @@
 			});
 		};
 
-		self.undeleteRow = function (rowIndex) {
+		self.restoreRow = function (rowIndex) {
 			return self.each(function () {
 				var $this   = $(this);
 				var data    = $this.data('jsea.grid');
 				var rowData = data.getRowData(rowIndex);
-				rowData[data.options.statProp] = null;
-				data.modifyRow(rowIndex, rowData);
-				data.removeRowStylesheet(rowIndex, 'deleted');
+				if (rowData[data.options.statProp] == JSEA.Constants.STAT_ADDED) {
+					data.removeRow(rowIndex);
+				} else if (rowData[data.options.statProp] == JSEA.Constants.STAT_MODIFIED) {
+					var oldData = data.options.rs[rowIndex];
+					oldData[data.options.statProp] = null;
+					data.modifyRow(rowIndex, oldData);
+					data.removeRowStylesheet(rowIndex, 'updated');
+				} else if (rowData[data.options.statProp] == JSEA.Constants.STAT_REMOVED) {
+					rowData[data.options.statProp] = null;
+					data.modifyRow(rowIndex, rowData);
+					data.removeRowStylesheet(rowIndex, 'deleted');
+				}
 			});
 		};
 
