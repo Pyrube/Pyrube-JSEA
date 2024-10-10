@@ -451,7 +451,7 @@ ul.checkboxes.error { border: var(--jsea-error-border); }
 		vertical-align: middle !important;
 		pointer-events: none;
 	}
-	ul.checkboxes.chips > li > span.radio {
+	ul.checkboxes.chips > li > span.checkbox {
 		width: 100%; height: 100%;
 		background-image: none;
 	}
