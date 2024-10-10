@@ -38,7 +38,6 @@
 	Element.DEFAULTS = $.extend(true, {}, One.DEFAULTS, {
 		id           : undefined,
 		name         : undefined,
-		method       : undefined,  // main event method: function or json { event type : function }
 		stylization  : {
 			inactive    : null,
 			hidden      : null,
@@ -55,49 +54,16 @@
 
 		// initialize this element
 		this.initElement();
-		// resolve the method of this element
-		this.resolveMethod();
+		// resolve the 0-event of this field
+		this.resolveEvent0('click');
 		// initialize default/concrete events of this element
 		this.initDefaultEvents();
 		//this.initEvents();
 	};
 
-	Element.prototype.resolveMethod = function () {
-		if (this.options.method) {
-			this.event0 = {
-				type    : 'click', // default event type
-				confirm : null,    // whether confirm is required
-				fn      : null     // event method
-			};
-			if ($.isFunction(this.options.method)) {
-				// method is function
-				this.event0.fn = this.options.method;
-			} else {
-				// method is json { evtype : fn }
-				for (var [key, value] of Object.entries(this.options.method)) {
-					this.event0.type = key;
-					this.event0.fn   = value;
-					break; // just handle the first method if it is multiple
-				}
-			}
-			this.afterMethodResolved(this.event0);
-		}
-	};
-
-	Element.prototype.afterMethodResolved = function (event0) { };
-
 	Element.prototype.initDefaultEvents = function () {
-		var $this = this;
-		var event0 = this.event0;
-		if (event0 && $.isFunction(event0.fn)) {
-			this.$element.on(event0.type + '.jsea', function () {
-				if (event0.confirm) {
-					Confirm.request(JSEA.localizeMessage(event0.confirm), function () { event0.fn.apply($this.$element.data('jsea.plugin'), null); })
-				} else {
-					event0.fn.apply($this.$element.data('jsea.plugin'), null);
-				}
-			});
-		}
+		// bind the 0-event of this element if any
+		this.bindEvent0();
 	};
 
 	Element.prototype.stylize = function (entity) {
