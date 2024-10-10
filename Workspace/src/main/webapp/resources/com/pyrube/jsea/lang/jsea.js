@@ -657,9 +657,10 @@ JSEA.Rules = {
 					: function (jseao) { return jseao.options.sortable ? jseao.options.searchCriteria.sortBy != null && jseao.options.searchCriteria.sortBy != '' : true; }
 	},
 	data  : {
-		isAdded     : function (data) { return data.dataStatus == 'A'; },
-		isRemoved   : function (data) { return data.dataStatus == 'R'; },
-		cannotUndo  : function (data) { return data.dataStatus != 'A' && data.dataStatus != 'R'; },
+		isAdded     : function (data) { return data.dataStatus == JSEA.Constants.STAT_ADDED; },
+		isModified  : function (data) { return data.dataStatus == JSEA.Constants.STAT_MODIFIED; },
+		isRemoved   : function (data) { return data.dataStatus == JSEA.Constants.STAT_REMOVED; },
+		cannotUndo  : function (data) { return data.dataStatus === undefined || data.dataStatus == null; },
 		notCreated  : function (data) { return data.dataStatus == null; },
 		notSubmitted: function (data) { return data.dataStatus == 'J' || data.dataStatus == 'T' || data.dataStatus == 'N'; },
 		isSubmitted : function (data) { return data.dataStatus == 'C' || data.dataStatus == 'U' || data.dataStatus == 'D'; },
@@ -771,14 +772,7 @@ JSEA.Methods = {
 				}
 			});
 		},
-		undo     : function (operation) {
-			var rowData = this.getRowData(operation.rowIndex);
-			if (rowData[this.getOption('statProp')] == JSEA.Constants.STAT_ADDED) {
-				this.deleteRow(operation.rowIndex, true);
-			} else if (rowData[this.getOption('statProp')] == JSEA.Constants.STAT_REMOVED) {
-				this.undeleteRow(operation.rowIndex);
-			}
-		},
+		undo     : function (operation) { this.restoreRow(operation.rowIndex); },
 		view     : function (operation) {
 			Dialog.open({
 				url      : operation.url,
@@ -800,6 +794,7 @@ JSEA.Methods = {
  * Every component/element has <code>One</code> as a superclass.
  * The One object has following data:
  * guid      : the global unique id (type_longTimestamp)
+ * event     : the default/specified event of this JSEA.One: function or json { event type : function }
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -817,7 +812,8 @@ class One {
 	One.VERSION  = '1.0.0';
 
 	One.DEFAULTS = {
-		guid : null
+		guid     : null,
+		event    : undefined
 	};
 
 	One.prototype.$init = function (type, element, options) {
@@ -846,12 +842,54 @@ class One {
 		return(this.options.guid);
 	};
 
-	One.prototype.destroy = function () {
-		this.$element.removeData('jsea.one');
+	One.prototype.resolveEvent0 = function (defEvtype) {
+		if (this.options.event) {
+			this.event0 = {
+				type    : defEvtype, // default event type
+				confirm : null,       // whether confirm is required
+				fn      : null        // event method
+			};
+			if ($.isFunction(this.options.event)) {
+				// method is function
+				this.event0.fn = this.options.event;
+			} else {
+				// method is json { evtype : fn }
+				for (var [key, value] of Object.entries(this.options.event)) {
+					this.event0.type = key;
+					this.event0.fn   = value;
+					break; // just handle the first method if it is multiple
+				}
+			}
+			this.afterEvent0Resolved(this.event0);
+		}
+	};
+
+	One.prototype.afterEvent0Resolved = function (event0) { };
+
+	One.prototype.bindEvent0 = function () {
+		// the default/specified event of this <code>JSEA.One</code>
+		var $this  = this;
+		var event0 = this.event0;
+		if (event0 && $.isFunction(event0.fn)) {
+			this.$element.on(event0.type + '.jsea', function () {
+				if (event0.confirm) {
+					Confirm.request(JSEA.localizeMessage(event0.confirm), function () { event0.fn.apply($this.$element.data('jsea.plugin'), null); })
+				} else {
+					event0.fn.apply($this.$element.data('jsea.plugin'), null);
+				}
+			});
+		}
 	};
 
 	One.prototype.parseAttribute = function (attrName) {
 		return(JSEA.Jsons.parse(this.$element.attr(attrName)));
+	};
+
+	One.prototype.destroy = function () {
+		if (this.event0) {
+			this.$element.off(this.event0.type + '.jsea')
+		}
+		this.$element.removeData('jsea.one');
 	};
 
 	One.prototype.getDefaults = function () {
@@ -1151,7 +1189,8 @@ class One {
 		// methods of this <code>Func</code>
 		var styleMethods = $.extend(true, {}, JSEA.Methods.style, JSEA.getFuncMethods('style', funcname));
 		var gridMethods  = $.extend(true, {}, JSEA.Methods.grid,  JSEA.getFuncMethods('grid', funcname));
-		this.methods[funcname] = { style : styleMethods, grid : gridMethods };
+		var elemMethods  = $.extend(true, {}, JSEA.Methods.elem,  JSEA.getFuncMethods('elem', funcname));
+		this.methods[funcname] = { style : styleMethods, grid : gridMethods, elem : elemMethods };
 		// rules of this <code>Func</code>
 		var dataRules   = $.extend(true, {}, JSEA.Rules.data,   JSEA.getFuncRules('data', funcname));
 		var validRules  = $.extend(true, {}, JSEA.Rules.valid,  JSEA.getFuncRules('valid', funcname));
