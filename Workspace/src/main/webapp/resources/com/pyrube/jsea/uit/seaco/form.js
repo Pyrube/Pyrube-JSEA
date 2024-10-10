@@ -70,6 +70,7 @@ window.Form.inited = function () {
  *             popup for simple page loading in a popup;
  *             popdown for very simple page loading in a popdown;
  * operations: the standard default operations of this form (array)
+ *           + more operations required for this form (array)
  *           + more operations required in the nested form of this form (array)
  * actions   : the standard supported actions of this form (array)
  *           + more actions required for this form (array)
@@ -165,8 +166,10 @@ window.Form.inited = function () {
 		this.initForm();
 		this.options.instance = new JSEA.Form();
 
+		// resolve the 0-event of this form
+		this.resolveEvent0('init');
 		// initialize default events and respective events
-		this.bindDefaultEvents();
+		this.initDefaultEvents();
 		this.initEvents();
 
 		// handle messages from back-end
@@ -185,7 +188,7 @@ window.Form.inited = function () {
 		}).prependTo(this.$element);
 	}
 
-	BaseForm.prototype.bindDefaultEvents = function () { 
+	BaseForm.prototype.initDefaultEvents = function () { 
 		var $this = this;
 		this.$element.on('validatesuccess.jsea', function () {
 			var $this = this;
@@ -220,6 +223,18 @@ window.Form.inited = function () {
 					$this.$element.trigger('close');
 				});
 			}
+		}
+
+		// bind 0-event of this form if any
+		this.bindFormEvent();
+	};
+
+	BaseForm.prototype.bindFormEvent = function () {
+		// 0-event of this form
+		var event0 = this.event0;
+		if (event0 && $.isFunction(event0.fn)) {
+			if (event0.type == 'init') { window.Form(event0.fn); } 
+			else { this.bindEvent0(); }
 		}
 	};
 
@@ -539,6 +554,7 @@ window.Form.inited = function () {
 		var formOptions = this.parseAttribute(JSEA.Constants.ATTR_FORM_OPTIONS);
 		var operations  = formOptions.operations;
 		if (operations) {
+			delete formOptions.operations;
 			for (var operation of operations) {
 				// make the form operations enabled
 				if (typeof(operation) != 'string') operation.enabled = true;
@@ -546,6 +562,7 @@ window.Form.inited = function () {
 		}
 		var actions     = formOptions.actions;
 		if (actions) {
+			delete formOptions.actions;
 			for (var action of actions) {
 				// make the form actions enabled
 				if (typeof(action) != 'string') action.enabled = true;
@@ -553,8 +570,8 @@ window.Form.inited = function () {
 		}
 
 		options = $.extend(true, {}, this.getDefaults(), this.$super().getOptions(options), formOptions, options);
-		if (operations) options.operations.unshift(operations);
-		if (actions)    options.actions.unshift(actions);
+		if (operations) options.operations.unshift.apply(options.operations, operations);
+		if (actions)    options.actions.unshift.apply(options.actions, actions);
 		return options;
 	};
   
@@ -1014,14 +1031,16 @@ window.Form.inited = function () {
 	GridForm.VERSION  = '1.0.0';
 
 	GridForm.DEFAULTS = $.extend({}, $.fn.baseform.Constructor.DEFAULTS, {
-		robustness: ['funcname', 'keyProp', 'statProp'],
-		operation: 'list',
-		typeProp: null,
-		operations: [   { enabled : false, name : 'create', url : null, inline : false, dors : false },
-						{ enabled : false, name : 'update', url : null, inline : true,  dors : false },
-						{ enabled : false, name : 'delete', url : null, inline : true,  dors : false },
-						{ enabled : false, name : 'view',   url : null, inline : true,  dors : false } ],
-		filterable: true
+		robustness    : ['funcname', 'keyProp'],
+		operation     :  'list',
+		typeProp      : null,
+		operations    : [{ enabled : false, name : 'create', url : null, inline : false, dors : false },
+						 { enabled : false, name : 'update', url : null, inline : true,  dors : false },
+						 { enabled : false, name : 'delete', url : null, inline : true,  dors : false },
+						 { enabled : false, name : 'view',   url : null, inline : true,  dors : false },
+						 { enabled : false, name : 'import', url : null, inline : false, dors : false },
+						 { enabled : false, name : 'export', url : null, inline : false, dors : false } ],
+		filterable    : true
 	});
 
 	// NOTE: FORM.GRID EXTENDS FORM.BASE
@@ -1102,13 +1121,12 @@ window.Form.inited = function () {
 	GridForm.prototype.onGridSelect = function (rowIndex, rowData) {
 		JSEA.ifRobust.apply(this, ['prop', [this.options.keyProp, rowData]]);
 		JSEA.ifRobust.apply(this, ['dataType', [rowData]]);
-		JSEA.ifRobust.apply(this, ['prop', [this.options.statProp, rowData]]);
 		this.bindMeta({
 			funcname : this.options.funcname,
 			operation: this.options.operation,
-			key      : JSEA.Jsons.formatProperty(rowData, this.options.keyProp),
-			type     : this.options.typeProp ? JSEA.Jsons.formatProperty(rowData, this.options.typeProp) : this.options.dataType,
-			status   : JSEA.Jsons.formatProperty(rowData, this.options.statProp)
+			key      : JSEA.Jsons.getProperty(rowData, this.options.keyProp),
+			type     : this.options.typeProp ? JSEA.Jsons.getProperty(rowData, this.options.typeProp) : this.options.dataType,
+			status   : JSEA.Jsons.getProperty(rowData, this.options.statProp)
 		});
 	};
 
@@ -1238,6 +1256,7 @@ window.Form.inited = function () {
 		var scope  = operation.scope;
 		var funcname = this.options.funcname;
 		Popdown.request({
+			owner     : this.$element.data('jsea.plugin'),
 			trigger   : $trigger,
 			title     : JSEA.localizeMessage(funcname + '.infobar.' + funcname + '-' + opname),
 			url       : url,
@@ -1524,7 +1543,7 @@ window.Form.inited = function () {
 		mode            : 'savexit',
 		refProp         : null,
 		rsnProp         : 'comments',
-		actions         : ['abort', 'save', 'submit', 'reject', 'approve'],
+		actions         : ['abort', 'save', 'submit', 'reject', 'approve', 'confirm', 'okay'],
 		more            : null,
 		rawUsed         : false,
 		resetable       : true,
@@ -1568,17 +1587,15 @@ window.Form.inited = function () {
 	};
 
 	DetailForm.prototype.initMeta = function () {
-		if (!this.options.nested) {
-			// prepare data information for Toolbar if this form is not nested
-			// comments out as below, just bind data onto toolbar, no robust needed for some special forms (e.x. Note)
-			/**JSEA.ifRobust.apply(this, ['field', [this.options.keyProp]]);
-			JSEA.ifRobust.apply(this, ['field', [this.options.statProp]]); */
+		if (!this.options.nested && !this.options.metaless) {
+			// prepare data information for Toolbar if this form is not nested or not metaless
+			JSEA.ifRobust.apply(this, ['field', [this.options.keyProp]]);
 			this.bindMeta({
 				funcname : this.options.funcname,
 				operation: this.options.operation,
 				key      : this.getProperty(this.options.keyProp),
 				type     : this.options.dataType,
-				status   : this.getProperty(this.options.statProp)
+				status   : this.getProperty(this.options.statProp),
 			});
 		}
 	};
