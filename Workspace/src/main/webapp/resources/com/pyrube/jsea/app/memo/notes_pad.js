@@ -83,7 +83,7 @@ $(function () {
 	window.Page.toolize({
 		name     : 'notepad',
 		manager  : Noter,
-		method   : Noter.open,
+		event    : Noter.open,
 		dataListening: true,
 		disabled : true
 	});
