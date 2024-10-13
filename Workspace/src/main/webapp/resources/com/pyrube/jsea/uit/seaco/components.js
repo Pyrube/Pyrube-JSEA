@@ -48,8 +48,8 @@
 		var $messageArea = $("<div class='message-area'>");
 		var $li = $(document.createElement("LI")).addClass("message level")
 				.append(IconBuilder.build({
-					name : 'close',
-					method : function () { $this.close(); }
+					name  : 'close',
+					event : function () { $this.close(); }
 				}).append("X"))
 				.append("<span class='level'></span>")
 				.append("<label id='msgContent' class='level'></label>");
@@ -624,7 +624,7 @@ var Messages = {
 
 	Navbar.prototype.append = function (navOptions) {
 		// trigger nav event via this.initEvents
-		navOptions = $.extend(navOptions, { method : null });
+		navOptions = $.extend(navOptions, { event : null });
 		var lnkOptions = {
 			id   : navOptions.id,
 			name : navOptions.name,
@@ -719,7 +719,7 @@ var Messages = {
 			disabled : false
 		}, {
 			name     : 'hide',
-			method   : function () { this.showOrHide(); },
+			event    : function () { this.showOrHide(); },
 			dataListening: false,
 			disabled : false
 		} ]
@@ -787,7 +787,7 @@ var Messages = {
 	
 	Toolbar.prototype.add = function (toolOptions) {
 		// trigger tool event via this.initEvents, instead of IconBuilder.build 
-		var iconOptions = $.extend({}, toolOptions, { method : null });
+		var iconOptions = $.extend({}, toolOptions, { event : null });
 		var $tool = IconBuilder.build(iconOptions);
 		if (toolOptions.dataListening) this.addDataListener(toolOptions.name);
 		var $toolWrapper = $(document.createElement('LI'));
@@ -872,7 +872,7 @@ var Messages = {
 	
 	Toolbar.prototype.fireToolClicked = function ($trigger) {
 		var toolOptions = $trigger.data(Toolbar.Constants.OBJATTR_TOOL_OPTIONS);
-		if(toolOptions && $.isFunction(toolOptions.method)) toolOptions.method.apply(this, [this.getData()]);
+		if(toolOptions && $.isFunction(toolOptions.event)) toolOptions.event.apply(this, [this.getData()]);
 	};
 	
 	Toolbar.prototype.getDefaults = function () {
