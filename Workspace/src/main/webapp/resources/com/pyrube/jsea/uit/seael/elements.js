@@ -193,8 +193,8 @@
 /**
  * JSEA Button element
  * The Button object has following data:
- * name. button name (string)
- * method. click to invoke (function)
+ * name.  button name (string)
+ * event. method to be invoked by click event (function)
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -243,7 +243,7 @@
 		}
 	};
 
-	Button.prototype.afterMethodResolved = function (event0) {
+	Button.prototype.afterEvent0Resolved = function (event0) {
 		event0.confirm = this.options.confirm || undefined;
 	};
 
@@ -326,8 +326,8 @@
  * The ButtonBuilder object has following methods:
  * build  :  returns new Button instance
  *     @param options
- *            name. button name (string)
- *            method. click to invoke (function)
+ *            name.  button name (string)
+ *            event. method to be invoked by click event (function)
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -345,7 +345,7 @@ var ButtonBuilder = {
  * The Icon object has following data:
  * name. icon name (string)
  * tooltips. icon tooltips (string)
- * method. click to invoke (function)
+ * event.    method to be invoked by click event (function)
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -448,9 +448,9 @@ var ButtonBuilder = {
  * The IconBuilder object has following methods:
  * build  :  returns new Icon instance
  *     @param options
- *            name. icon name (string)
+ *            name.     icon name (string)
  *            tooltips. icon tooltips (string)
- *            method. click to invoke (function)
+ *            event.    method to be invoked by click event (function)
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -466,8 +466,8 @@ var IconBuilder = {
 /**
  * JSEA Link element
  * The Link object has following data:
- * name. button name (string)
- * method. click to invoke (function)
+ * name.  link name (string)
+ * event. method to be invoked by click event (function)
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -616,9 +616,9 @@ var IconBuilder = {
  * The LinkBuilder object has following methods:
  * build  :  returns new Link instance
  *     @param options
- *            name. icon name (string)
- *            href. link href (string)
- *            method. click to invoke (function)
+ *            name.  icon name (string)
+ *            href.  link href (string)
+ *            event. method to be invoked by click event (function)
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -635,8 +635,8 @@ var LinkBuilder = {
 /**
  * JSEA On-off element extends Link element
  * The On-off object has following data:
- * name. onoff name (string)
- * method. click to invoke (function)
+ * name.  onoff name (string)
+ * event. method to be invoked by click event (function)
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -659,7 +659,7 @@ var LinkBuilder = {
 		icon       : 'onoff',
 		name       : 'toggle',
 		on         : true,
-		method     : function () { this.toggle(); },
+		event      : function () { this.toggle(); },
 		onToggle   : null
 	});
 
