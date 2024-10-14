@@ -48,6 +48,10 @@
 
 	Tipbox.prototype.constructor = Tipbox;
 
+	Tipbox.prototype.arrow = function () {
+		return (this.$arrow = this.$arrow || this.tip().find('.tipbox-arrow'));
+	};
+
 	Tipbox.prototype.getContent = function () {
 		var $e = this.$element;
 		var o = this.options;
@@ -174,6 +178,7 @@
 		dismissible: true,
 		closeOnHide: false,
 		placement: 'bottom',
+		owner: null,
 		trigger: 'click',
 		url: '',
 		html: true,
@@ -182,7 +187,7 @@
 			before: null, //function ($this, xhr){}
 			success: null //function ($this, xhr){}
 		},
-		template: '<div class="popbox" role="tooltip"><div class="arrow"></div><h3 class="popbox-title"></h3><div class="popbox-content"></div></div>'
+		template: '<div class="popbox" role="tooltip"><div class="popbox-arrow"></div><h3 class="popbox-title"></h3><div class="popbox-content"></div></div>'
 	});
 
 	Popbox.BINDERS = {};
@@ -192,7 +197,7 @@
 	Popbox.prototype = $.extend({}, $.fn.tooltip.Constructor.prototype);
 
 	Popbox.prototype.constructor = Popbox;
-	
+
 	Popbox.prototype.initBox = function (type, element, options) {
 		this.init(type, element, options);
 		this.options.ts = new Date().getTime();
@@ -368,8 +373,9 @@
 		if (this.xhr) {
 			return;
 		}
+		var accessUrl = JSEA.getPageContext().resolveUrl(this.options.url);
 		this.xhr = $.ajax({
-			url: JSEA.getPageContext().resolveUrl(this.options.url),
+			url: accessUrl,
 			type: 'POST',
 			cache: this.options.cache,
 			data: this.options.urlParams,
@@ -393,7 +399,12 @@
 				var $contentElement = $this.getContentElement();
 				var $that = $contentElement.find("form");
 				if ($that.length != 0) {
-					window.Page.formize($that, {poproxy : $this}, null);
+					var moreOptions = $.extend(true, { 
+						poproxy   : $this,
+						popped    : true,
+						closeable : true
+					}, ($this.options.owner) ? $this.options.owner.resolveNextOptions(accessUrl) : null);
+					window.Page.formize($that, moreOptions, null);
 				} else {
 					$this.components = JSEA.objectize($contentElement);
 					$this.validators = $this.components['validator'];
@@ -488,9 +499,9 @@
 				|| $e.attr('data-original-title');
 		return title;
 	};
-	
+
 	Popbox.prototype.arrow = function () {
-		return (this.$arrow = this.$arrow || this.tip().find('.arrow'));
+		return (this.$arrow = this.$arrow || this.tip().find('.popbox-arrow'));
 	};
 
 	Popbox.prototype.destroy = function () { // override this method from Tooltip
@@ -1279,8 +1290,8 @@ Reject.request = function (button, okCallback) {
 		var $contentElement = $this.$popbox.getContentElement();
 		$contentElement.append(divFuncbar).find('.buttons')
 		.append(ButtonBuilder.build({
-			name   : 'reject',
-			method : function () {
+			name  : 'reject',
+			event : function () {
 				var comments = $contentElement.find('textarea').val();
 				if (comments) {
 					okCallback(comments);
@@ -1289,8 +1300,8 @@ Reject.request = function (button, okCallback) {
 			}
 		}))
 		.append(ButtonBuilder.build({
-			name   : 'cancel',
-			method : function () {
+			name  : 'cancel',
+			event : function () {
 				$this.$popbox.hide();
 			}
 		}));
@@ -1373,17 +1384,17 @@ Confirm.request = function (message, okCallback, cancelCallback, extAction) {
 	var divPopup = popupInfo.divPopup;
 	$(divPopup).find('.buttons')
 			.append(ButtonBuilder.build({
-				name : 'ok',
-				method : function () { Confirm.finish(1); }
+				name  : 'okay',
+				event : function () { Confirm.finish(1); }
 			}))
 			.append(ButtonBuilder.build({
-				name : 'cancel',
-				method : function () { Confirm.finish(0); }
+				name  : 'cancel',
+				event : function () { Confirm.finish(0); }
 			}));
 	if (extAction != null) {
 		$(divPopup).find('.buttons').append(ButtonBuilder.build({
-			name : extAction.name,
-			method : function () { Confirm.finish(2); }
+			name  : extAction.name,
+			event : function () { Confirm.finish(2); }
 		})); 
 	}
 	Confirm.reposition();
@@ -1459,16 +1470,16 @@ Yesno.request = function (message, yesCallback, noCallback, closeCallback) {
 	var divPopup = popupInfo.divPopup;
 	$(divPopup).find('.buttons')
 			.append(ButtonBuilder.build({
-				name : 'yes',
-				method : function () { Yesno.finish(1); }
+				name  : 'yes',
+				event : function () { Yesno.finish(1); }
 			}))
 			.append(ButtonBuilder.build({
-				name : 'no',
-				method : function () { Yesno.finish(0); }
+				name  : 'no',
+				event : function () { Yesno.finish(0); }
 			}))
 			.append(ButtonBuilder.build({
-				name : 'close',
-				method : function () { Yesno.finish(-1); }
+				name  : 'close',
+				event : function () { Yesno.finish(-1); }
 			}));
 	Yesno.reposition();
 };
