@@ -106,9 +106,9 @@
 		var format = Format.dateFormatOf(localeCode, nameOrPattern);
 		return format.format(date);
 	};
-	Dates.format.date           = function (date) { Dates.format(date, JSEA.Constants.FORMATS.date); };
-	Dates.format.timestamp      = function (date) { Dates.format(date, JSEA.Constants.FORMATS.timestamp); };
-	Dates.format.longTimestampZ = function (date) { Dates.format(date, JSEA.Constants.FORMATS.longTimestampZ); };
+	Dates.format.date           = function (date) { return Dates.format(date, JSEA.Constants.FORMATS.date); };
+	Dates.format.timestamp      = function (date) { return Dates.format(date, JSEA.Constants.FORMATS.timestamp); };
+	Dates.format.longTimestampZ = function (date) { return Dates.format(date, JSEA.Constants.FORMATS.longTimestampZ); };
 
 	/**
 	 * returns a <code>Date</code> of now
@@ -351,7 +351,7 @@
 		var format = Format.numberFormatOf(localeCode, nameOrPattern);
 		return format.format(number);
 	};
-	Numbers.format.amount  = function (number) { Numbers.format(number, JSEA.Constants.FORMATS.amount); };
+	Numbers.format.amount  = function (number) { return Numbers.format(number, JSEA.Constants.FORMATS.amount); };
 	Numbers.format.percent = function (number, scale) {
 		var value   = Decimal.valueOf(number).multiplies(100).round(scale = (scale || 0)).toNumber();
 		var pattern = JSEA.Constants.FORMATS['percent' + scale];
