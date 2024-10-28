@@ -757,12 +757,15 @@
 
 		// animation for removing
 		var headerStep = this.$listHeader[0].offsetHeight;
-		var $clone = $(row).clone().appendTo(this.$listArea);
+		var $row   = $(row);
+		var $clone = $row.clone().appendTo(this.$listArea);
 		var step = $clone[0].offsetHeight;
 		this.$listArea.addClass('sliding-container');
+		$row.addClass('staying')
 		$clone.addClass('sliding-out')
 			.css('top', (headerStep + (index) * step) + 'px');
 		setTimeout(function () {
+			$row.addClass('hidden');
 			$clone.addClass('hidden')
 				.css('top', (headerStep + (index - 1) * step) + 'px');
 			setTimeout(function () {
@@ -771,16 +774,17 @@
 					.removeClass('sliding-out')
 					.removeClass('hidden')
 					.remove();
+				$row
+					.removeData(Grid.Constants.OBJATTR_ROW_DATA)
+					.removeClass('staying')
+					.removeClass('hidden')
+					.remove();
 				$this.$listArea.removeClass('sliding-container');
+				// fire rowremove event
+				$this.fireRowRemoved(index, data);
 			}, Grid.Constants.SLIDE_SPEED);
 		}, 10);
 		// ends of animation
-		
-		$(row)
-			.removeData(Grid.Constants.OBJATTR_ROW_DATA)
-			.remove();
-		// fire rowremove event
-		this.fireRowRemoved(index, data);
 	};
 
 	Grid.prototype.buildRow = function (index, $row, data) {
@@ -1451,6 +1455,23 @@
 			return(sectionPost);
 		};
 
+		self.getPost = function () {
+			var rs       = {};
+			var rsProp   = null;
+			var rowsPost = [];
+			self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				rsProp      = data.options.rsProp;
+				for (var i = 0; i < data.getRowCount(); i++) {
+					rowsPost.push(data.getRowPost(i));
+				}
+				rs[rsProp] = rowsPost;
+				return false;
+			});
+			return rs;
+		};
+
 		self.getSectionIndexes = function () {
 			var indexes = null;
 			self.each(function () {
@@ -1525,6 +1546,15 @@
 			});
 		};
 
+		self.removeAll = function () {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				data.options.rs = [];
+				data.load();
+			});
+		};
+
 		self.getOperations = function () {
 			var operations = [];
 			self.each(function () {
@@ -1575,6 +1605,18 @@
 				return false;
 			});
 			return(multiple);
+		};
+
+		self['import'] = function (original) {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				var rule    = Page.DataRule('transfer');
+				var transfer= new DataTransfer(rule);
+				var rs      = transfer.read(original);
+				data.options.rs = rs;
+				data.load();
+			});
 		};
 
 		self.reload = function () {

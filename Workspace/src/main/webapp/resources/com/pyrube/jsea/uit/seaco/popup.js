@@ -885,6 +885,7 @@ Wicket.prototype.open = function (option) {
 	// for dialog main
 	var dialog_m_id = 'jsea_dialog_m_' + newZIndex;
 	_jsea_dialog.append("<div id='" + dialog_m_id + "' class='jsea_dialog_m'></div>");
+	_jsea_dialog.append("<div style='clear:both;'></div>"); // append a layer for clear:both
 	var _jsea_dialog_m = $("#jsea_dialog_m_" + newZIndex);
 	//_jsea_dialog_m.css("width", popupInfo.width + "px");
 	// for main header
@@ -997,7 +998,7 @@ Wicket.prototype.setPosition = function (dialogObj, mainObj, nowShowing) {
 		}
 		setTimeout(function () {
 			dialogObj.removeClass('initializing');
-			var _top = dialogHeight <= height ? (windowHight - dialogHeight) : (windowHight - height);
+			var _top = (windowHight - height);// dialogHeight <= height ? (windowHight - dialogHeight) : (windowHight - height);
 			var cssTop = (_top < 0 ? 0 : _top) + 'px';
 			// when open must use dom function to reset the position.
 			if (newZIndex != -1) {
@@ -1050,6 +1051,12 @@ Wicket.prototype.initTargetCloseEvent = function () {
 	var divPopup = popupInfo.divPopup;
 	$(divPopup).find('.jsea_dialog_m_h_r').off('click').on('click', $.proxy(this.close, this, null));
 };
+Wicket.prototype.prepareClose = function (popupInfo) {
+	var divPopup = popupInfo.divPopup;
+	var index    = Wicket.popupInfos.indexOf(popupInfo);
+	Wicket.popupInfos.remove(index);
+	return (divPopup);
+};
 Wicket.prototype.close = function (popupInfo) {
 	if (!popupInfo) popupInfo = this.getCurrentPopupInfo();
 	if (popupInfo && popupInfo.close) popupInfo.close();
@@ -1063,20 +1070,13 @@ Wicket.prototype.close = function (popupInfo) {
 	// for body
 	if (Wicket.popupInfos.size() == 0) $('body').removeClass('with_wicket');
 };
-Wicket.prototype.apply = function (objResult) {
-	var popupInfo = this.getCurrentPopupInfo();
+Wicket.prototype.apply = function (popupInfo, objResult) {
 	if (popupInfo && popupInfo.complete) popupInfo.complete(objResult);
 };
 Wicket.prototype.finish = function (objResult) {
 	var popupInfo = this.getCurrentPopupInfo();
-	this.apply(objResult);
 	this.close(popupInfo);
-};
-Wicket.prototype.prepareClose = function (popupInfo) {
-	var divPopup = popupInfo.divPopup;
-	var index    = Wicket.popupInfos.indexOf(popupInfo);
-	Wicket.popupInfos.remove(index);
-	return (divPopup);
+	this.apply(popupInfo, objResult);
 };
 Wicket.prototype.getPopupZindex = function () {
 	var popupInfo = this.getCurrentPopupInfo();

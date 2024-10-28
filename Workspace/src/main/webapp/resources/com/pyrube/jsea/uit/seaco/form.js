@@ -142,6 +142,7 @@ window.Form.inited = function () {
 		this.options   = this.getOptions(options);
 		this.options.id       =  this.options.funcname + (this.options.operation != null ? this.options.operation.capitalize() : '') + 'Form';
 		this.options.dataType =  this.options.funcname.toUpperCase();
+		this.options.enctype  =  this.$element.attr('enctype') || JSEA.Constants.ENCTYPE_DEFAULT;
 		this.options.nested   = (this.options.args != null && this.options.args.nested !== undefined) ? this.options.args.nested : this.options.nested;
 		this.options.prev    && (this.options.prev.options.next = this); // link onto the previous form
 
@@ -207,6 +208,12 @@ window.Form.inited = function () {
 				});
 		}
 
+		if (this.options.popped) {
+			var poproxy = this.options.poproxy;
+			this.$element.on('resize.jsea', function () {
+				if (poproxy && poproxy.reposition) poproxy.reposition();
+			});
+		}
 		// bind the event 'Close' if it is a popped form, and closeable also
 		if (this.options.popped && this.options.closeable) {
 			if (this.options.prev == null) {
@@ -249,6 +256,10 @@ window.Form.inited = function () {
 			return true;
 		}
 		return false;
+	};
+
+	BaseForm.prototype.fireDimensionChanged = function () {
+		this.$element.trigger('resize');
 	};
 
 	BaseForm.prototype.handleMessages = function () {
@@ -310,8 +321,7 @@ window.Form.inited = function () {
 		if (operation.inline) {
 			params = operation.params;
 		}
-		var mode = operation.mode;
-		if (!mode) mode = this.options.mode;
+		var mode = operation.mode || this.options.mode;
 		this[mode]($trigger, $.extend(true, {}, operation, {
 			name   : opname,
 			url    : url,
@@ -823,31 +833,54 @@ window.Form.inited = function () {
 		if (this.options.validatable && !this.validators.validate()) return;
 		// data for before action
 		this.preAction();
+		// others for action
+		action.enctype = action.enctype || this.options.enctype;
 		// do action
-		var mode = action.mode;
-		if (!mode) mode = this.options.mode;
+		var mode = action.mode || this.options.mode;
 		this[mode](action);
 	};
 
-	SimpleForm.prototype.save = function (action) {
+	SimpleForm.prototype.post = function (action) {
 		var $this = this;
 		var url   = this.resolveActionUrl(action);
-		// submit at last
-		$this.$element.ajaxSubmit({
-			beforeSubmit : function () {
-				$this.$element.waiting({fixed : true});
-			},
-			url: JSEA.getPageContext().resolveUrl(url),
-			dataType: action.dataType != null ? action.dataType : "json",
-			success: function (data, stat, xhr) {
-				$this.postAction(data);
-				$this.$element.waiting('hide');
-				if ($.isFunction(action.callback)) action.callback(data, xhr);
-			},
-			error : function (xhr) { $this.$element.waiting('hide'); },
-			//this is called after the response or error functions are finished
-			complete: function (xhr, status) { }
-		});
+		if (action.enctype.toLowerCase() == JSEA.Constants.ENCTYPE_JSON) {
+			// ajax-submit json data
+			$.ajax({
+				method: 'POST',
+				url: JSEA.getPageContext().resolveUrl(url),
+				data: JSON.stringify(this.postData),
+				dataType: 'json',
+				contentType: 'application/json; charset=UTF-8',
+				beforeSend: function () {
+					$this.$element.waiting({fixed : true});
+				},
+				success: function (data, stat, xhr) {
+					$this.postAction(data);
+					$this.$element.waiting('hide');
+					if ($.isFunction(action.callback)) action.callback(data, xhr);
+				}, 
+				error: function (xhr) { $this.$element.waiting('hide'); },
+				//this is called after the response or error functions are finished
+				complete: function (xhr, status) { }
+			});
+		} else {
+			// ajax-submit form data
+			$this.$element.ajaxSubmit({
+				beforeSubmit : function () {
+					$this.$element.waiting({fixed : true});
+				},
+				url: JSEA.getPageContext().resolveUrl(url),
+				dataType: action.dataType != null ? action.dataType : "json",
+				success: function (data, stat, xhr) {
+					$this.postAction(data);
+					$this.$element.waiting('hide');
+					if ($.isFunction(action.callback)) action.callback(data, xhr);
+				},
+				error : function (xhr) { $this.$element.waiting('hide'); },
+				//this is called after the response or error functions are finished
+				complete: function (xhr, status) { }
+			});
+		}
 	};
 
 	/**
@@ -1068,7 +1101,7 @@ window.Form.inited = function () {
 								urlParams: this.moreGridParams(),
 								rsProp: this.options.rsProp,
 								async: true,
-								onLoad: function () { $this.onGridLoad(); },
+								onLoad: function () { $this.onGridLoad(); $this.fireDimensionChanged(); },
 								onSelect0: function (rowIndex, rowData) { $this.onGridSelect(rowIndex, rowData); }
 							});
 	};
@@ -1082,17 +1115,17 @@ window.Form.inited = function () {
 			var $contentElement = $this.$searchbox.getContentElement();
 			$contentElement.append(funcbar).find('.buttons')
 			.append(ButtonBuilder.build({
-				name   : 'ok',
-				method : function () {
+				name  : 'okay',
+				event : function () {
 					var searchParams = JSEA.serialize($("input, select, textarea", $contentElement));
 					$this.$grid.search(searchParams);
 					$this.$searchbox.hide();
 				}
 			}))
 			.append(ButtonBuilder.build({
-				name   : 'clear',
+				name  : 'clear',
 				//the clearFields method is in the jquery.form.js
-				method : function () { $('input, select, textarea', $contentElement).clearFields(true).trigger('change'); }
+				event : function () { $('input, select, textarea', $contentElement).clearFields(true).trigger('change'); }
 			}));
 		};
 		var $button = $(JSEA.Constants.TAG_BUTTON + ".search", $this.$element);
@@ -1213,8 +1246,7 @@ window.Form.inited = function () {
 		}
 		params = $.extend(true, {}, params, this.moreOperationParams());
 		operation.params = params;
-		var mode = operation.mode;
-		if (!mode) mode = this.options.mode;
+		var mode = operation.mode || this.options.mode;
 		this[mode]($trigger, $.extend(true, {}, operation, {
 			name   : opname,
 			url    : url,
@@ -1442,9 +1474,7 @@ window.Form.inited = function () {
 		return this.options.args;
 	};
 
-	LookupForm.prototype.onGridLoad = function () {
-		Lookup.reposition();
-	};
+	LookupForm.prototype.onGridLoad = function () { };
 
 	LookupForm.prototype.onGridSelect = function (rowIndex, rowData) { };
 
@@ -1552,11 +1582,11 @@ window.Form.inited = function () {
 
 	// NOTE: FORM.DETAIL EXTENDS FORM.SIMPLE
 	// =======================================
-	
+
 	DetailForm.prototype = $.extend({}, $.fn.simpleform.Constructor.prototype);
 
 	DetailForm.prototype.constructor = DetailForm;
-	
+
 	DetailForm.prototype.initPrimary = function () {
 		var $this    = this;
 		// activate row listeners of grids
@@ -1602,7 +1632,12 @@ window.Form.inited = function () {
 
 	DetailForm.prototype.initEvents = function () {
 		var $this = this;
-		
+		// grid event
+		$('*[' + JSEA.Constants.ATTR_GRID_OPTIONS + ']', this.$element).each(function () {
+			$(this).grid().on('rowadd.jsea rowremove.jsea', function () {
+				$this.fireDimensionChanged();
+			});
+		});
 		// reset event
 		if (!this.options.nested && this.options.resetable) {
 			$(".buttons > .btn.reset", this.$element).on('click.jsea', function () {
@@ -1711,46 +1746,48 @@ window.Form.inited = function () {
 
 	DetailForm.prototype.preAction  = function () {
 		var $this = this;
+		//the serializeJson may be like {sampleName : 'sample001', formats : ['XLS', 'PDF']}
+		var data = JSEA.serialize(this.$element);
+		this.postData = data;
 		// check if raw data will be used
 		if (this.options.rawUsed) {
-			//the serializeJson may be like {sampleName : 'sample001', formats : ['XLS', 'PDF']}
-			var data = JSEA.serialize(this.$element);
-			this.raw = this.toRawData(data);
+			this.rawData = this.toRawData(data);
 		}
 		// change grid data to post fields (formatted) then
 		$('*[' + JSEA.Constants.ATTR_GRID_OPTIONS + ']', this.$element).each(function () {
 			var $grid = $(this).grid();
 			$grid.genPostFields(); 
+			$.extend($this.postData, $grid.getPost());
 			if ($this.options.rawUsed) {
-				$.extend($this.raw, $grid.getData());
+				$.extend($this.rawData, $grid.getData());
 			}
 		});
 	};
 
 	DetailForm.prototype.postAction  = function (data) {
 		// reset raw data
-		if (this.options.rawUsed) { this.raw = $.extend(this.raw, data); }
+		if (this.options.rawUsed) { this.rawData = $.extend(this.rawData, data); }
 	};
 
 	DetailForm.prototype.savexit = function (action) {
 		var $this = this;
 		$.extend(action, { callback : function (data, xhr) {
-			Message.success(action.success || ($this.options.funcname + '.success.' + $this.options.operation + JSEA.Constants.I18N_KEY_SEPARATOR + action.name));
+			Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
 			$this.backward(true, xhr.getResponseHeader('Target-Url'));
 		} });
-		this.save(action);
+		this.post(action);
 	};
 
-	DetailForm.prototype.async = function (action) {
+	DetailForm.prototype.save = function (action) {
 		var $this = this;
 		$.extend(action, { callback : function (data, xhr) {
-			Message.success(action.success || ($this.options.funcname + '.success.' + $this.options.operation + JSEA.Constants.I18N_KEY_SEPARATOR + action.name));
+			Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
 			if ($.isPlainObject($this.options.postHandlers)) {
 				var actionPostHandler = $this.options.postHandlers[action.name];
 				if ($.isFunction(actionPostHandler)) actionPostHandler(data, xhr);
 			}
 		} });
-		this.save(action);
+		this.post(action);
 	};
 
 	DetailForm.prototype.redirect = function (action) {
@@ -1761,34 +1798,7 @@ window.Form.inited = function () {
 			$this.$element.remove();
 			$next.detailform({gridform : $this.options.gridform});
 		} });
-		this.save(action);
-	};
-
-	DetailForm.prototype.download = function (action) {
-		this.submit(action);
-	};
-
-	DetailForm.prototype.openup = function (action) {
-		var $this = this;
-		var winName = 'target_win_' + ((new Date()).getTime());
-		var left = (screen) ? (screen.availWidth - 800) / 2 : 300;
-		var top = (screen) ? (screen.availHeight - 600) / 2 : 300;
-		var url = this.resolveActionUrl(action);
-		$this.$element[0].target = winName;
-		window.open("blank.jsp", winName, 'left='
-								+ left
-								+ ', top='
-								+ top
-								+ ', menubar=no, toolbar=no, location=no, scrollbars=yes, resizable=yes, width=800, height=600');
-		$this.$element.attr('action', JSEA.getPageContext().resolveUrl(url));
-		$this.$element.get(0).submit();
-	};
-
-	DetailForm.prototype.submit = function (action) {
-		var $this = this;
-		var url   = this.resolveActionUrl(action);
-		$this.$element.attr('action', JSEA.getPageContext().resolveUrl(url));
-		$this.$element.get(0).submit();
+		this.post(action);
 	};
 
 	DetailForm.prototype.popup = function (action) {
@@ -1805,6 +1815,29 @@ window.Form.inited = function () {
 				if ($.isFunction(action.callback)) action.callback(returnData);
 			}
 		});
+	};
+
+	DetailForm.prototype.download = function (action) {
+		var $this = this;
+		var url   = this.resolveActionUrl(action);
+		$this.$element.attr('action', JSEA.getPageContext().resolveUrl(url));
+		$this.$element.get(0).submit();
+	};
+
+	DetailForm.prototype.openup = function (action) {
+		var $this = this;
+		var winName = 'target_win_' + ((new Date()).getTime());
+		var left = (screen) ? (screen.availWidth - 800) / 2 : 300;
+		var top = (screen) ? (screen.availHeight - 600) / 2 : 300;
+		var url = this.resolveActionUrl(action);
+		$this.$element[0].target = winName;
+		window.open("blank.jsp", winName, 'left='
+								+ left
+								+ ', top='
+								+ top
+								+ ', menubar=no, toolbar=no, location=no, scrollbars=yes, resizable=yes, width=800, height=600');
+		$this.$element.attr('action', JSEA.getPageContext().resolveUrl(url));
+		$this.$element.get(0).submit();
 	};
 
 	DetailForm.prototype.reset = function () {
@@ -1888,7 +1921,7 @@ window.Form.inited = function () {
  * JSEA Popup form component
  * The form object has following data:
  * mode      : the action mode, default is savexit
- *             saveclose for save data and then close this popup
+ *             savexit for save data and then close this popup to exit
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -1907,15 +1940,15 @@ window.Form.inited = function () {
 	PopupForm.VERSION  = '1.0.0';
 
 	PopupForm.DEFAULTS = $.extend({}, $.fn.detailform.Constructor.DEFAULTS, {
-		robustness: [],
-		mode: 'saveclose',
-		returnProps: null,
-		poproxy: null, // popping proxy, Dialog or Popdown.Popbox
-		popped: true,
-		rawUsed: true,
-		modifiable: false,
-		backable: false,
-		closeable: true
+		robustness     : [],
+		mode           : 'savexit',
+		returnProps    : null,
+		poproxy        : null, // popping proxy, Dialog or Popdown.Popbox
+		popped         : true,
+		rawUsed        : true,
+		modifiable     : false,
+		backable       : false,
+		closeable      : true
 	});
 
 	// NOTE: FORM.POPUP EXTENDS FORM.DETAIL
@@ -1924,18 +1957,19 @@ window.Form.inited = function () {
 	PopupForm.prototype = $.extend({}, $.fn.detailform.Constructor.prototype);
 
 	PopupForm.prototype.constructor = PopupForm;
-	
+
 	PopupForm.prototype.okay = function (action) {
-		if (this.options.poproxy) this.options.poproxy.finish(this.raw);
+		var poproxy = this.options.poproxy;
+		if (poproxy) poproxy.finish(this.rawData);
 	};
 	
-	PopupForm.prototype.saveclose = function (action) {
+	PopupForm.prototype.savexit = function (action) {
 		var $this = this;
 		$.extend(action, { callback : function () {
-			Message.success(action.success || ($this.options.funcname + '.success.' + $this.options.operation + JSEA.Constants.I18N_KEY_SEPARATOR + action.name));
+			Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
 			$this.okay(action);
 		} });
-		this.save(action);
+		this.post(action);
 	};
 	
 	PopupForm.prototype.toRawData = function (data) {
