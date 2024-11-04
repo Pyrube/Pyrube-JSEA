@@ -277,7 +277,7 @@
 					return null;
 				}
 				// @param arg is an array: item 0 is for on, item 1 is for off
-				var $onoff$   = this.data(Grid.Constants.OBJATTR_ONE_INSTANCE);
+				var $onoff$   = this.data(Grid.Constants.OBJATTR_ONEOBJECT);
 				if ($onoff$  != null) {
 					$onoff$.toggle(value == arg[0]);
 					return $onoff$;
@@ -296,7 +296,7 @@
 						JSEA.Jsons.setProperty(rowData, column.name, (on ? arg[0] : arg[1]));
 					} });
 				}
-				this.data(Grid.Constants.OBJATTR_ONE_INSTANCE, $onoff$);
+				this.data(Grid.Constants.OBJATTR_ONEOBJECT, $onoff$);
 				if (operation != null) {
 					operation.colIndex = column.index;
 					operation.scope    = JSEA.Constants.SCOPE_CELL;
@@ -320,14 +320,14 @@
 				}
 				if (value != null && arg != null) value = Decimal.valueOf(value).divides(arg).toNumber();
 				if (value == null) value = Decimal.valueOf(arg).divides(argParams[0]).toNumber();
-				var $percentage$   = this.data(Grid.Constants.OBJATTR_ONE_INSTANCE);
+				var $percentage$   = this.data(Grid.Constants.OBJATTR_ONEOBJECT);
 				if ($percentage$  != null) {
 					$percentage$.percentage('setValue', value);
 					return $percentage$;
 				}
 				var $percentage  = $(document.createElement("div")).appendTo(this);
 				var $percentage$ =$percentage.percentage({ value : value });
-				this.data(Grid.Constants.OBJATTR_ONE_INSTANCE, $percentage$);
+				this.data(Grid.Constants.OBJATTR_ONEOBJECT, $percentage$);
 				return $percentage$;
 			},
 			rating   : function (value, arg, argParams, column) {
@@ -377,10 +377,11 @@
 	});
 
 	Grid.Constants = {
-		OBJATTR_ONE_INSTANCE     : 'jsea-grid-col-one-instance',
+		OBJATTR_ONEOBJECT     : 'jsea-grid-col-oneobject',
 		OBJATTR_ROW_DATA         : 'jsea-grid-row-data',
 		OBJATTR_COLUMN_OPTIONS   : 'jsea-grid-col-options',
 		OBJATTR_OPERATION_OPTIONS: 'jsea-grid-op-options',
+		KITNAME_DATATRANSFER     : 'jsea-grid-toolkit-datatransfer',
 		SORT_ASC              : 'asc',
 		SORT_DESC             : 'desc',
 		SLIDE_INTERVAL        : 50,
@@ -443,6 +444,7 @@
 		this.options   = this.getOptions(options);
 		this.count     = 0;
 		this.listeners = {};
+		this.toolkits  = {};
 		
 		//locate element for later use
 		this.locate();
@@ -750,6 +752,7 @@
 	};
 
 	Grid.prototype.removeRow = function (index) {
+		// --
 		this.count--;
 		var $this = this;
 		var row  = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET).get(index);
@@ -1224,14 +1227,26 @@
 		if (!this.listeners[opname]) { this.listeners[opname] = {}; }
 		this.listeners[opname].method = method;
 	};
-	
-	Grid.prototype.getProperties = function (propName) {
+
+	Grid.prototype.addToolkit = function (kitname, toolkit) {
+		this.toolkits[kitname] = toolkit;
+	};
+
+	Grid.prototype.getToolkit = function (kitname) {
+		return(this.toolkits[kitname]);
+	};
+
+	Grid.prototype.getProperties = function (propNames) {
 		var $rows = this.$listArea.find(Grid.LAYOUT.BODY_ROW_TAGNAME + '.' + Grid.LAYOUT.BODY_ROW_STYLESHEET);
 		var properties = [];
 		$rows.each(function () {
 			var $this   = $(this);
 			var rowData = $this.data(Grid.Constants.OBJATTR_ROW_DATA);
-			properties.push(rowData[propName]);
+			var propValues = [];
+			for (var propName of propNames) {
+				propValues.push(JSEA.Jsons.getProperty(rowData, propName));
+			}
+			properties.push(propValues);
 		});
 		return properties;
 	};
@@ -1253,9 +1268,17 @@
 	
 	Grid.prototype.destroy = function () {
 		if (this.options.pageable) {
+			// destroy pagebar
 			this.$pagebar[this.options.pagebar + 'Pagebar']('destroy');
 			this.$pagebar = null;
 		}
+		// gc toolkits
+		if (this.toolkits) {
+			for (var kitname in this.toolkits) {
+				delete this.toolkit[kitname];
+			}
+		}
+		// clear all data
 		this.clearData();
 		this.$element.off()
 			.removeData('jsea.grid')
@@ -1358,6 +1381,40 @@
 				var $this   = $(this);
 				var data    = $this.data('jsea.grid');
 				data.addRow(rowData);
+			});
+		};
+
+		self.removeAll = function () {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				var count   = data.getRowCount();
+				if (count > 0) {
+					for (var i = (count - 1); i >= 0; i--) {
+						data.removeRow(i);
+					}
+				}
+			});
+		};
+
+		self.regTransfer = function (dataRule) {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				var transfer= new DataTransfer(dataRule);
+				data.addToolkit(Grid.Constants.KITNAME_DATATRANSFER, transfer);
+			});
+		};
+
+		self.imp = function (source) {
+			return self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.grid');
+				var transfer= data.getToolkit(Grid.Constants.KITNAME_DATATRANSFER);
+				var srcRs   = transfer.read(source);
+				if (srcRs && srcRs.length > 0) {
+					for (var rowData of srcRs) data.addRow(rowData);
+				}
 			});
 		};
 
@@ -1546,15 +1603,6 @@
 			});
 		};
 
-		self.removeAll = function () {
-			return self.each(function () {
-				var $this   = $(this);
-				var data    = $this.data('jsea.grid');
-				data.options.rs = [];
-				data.load();
-			});
-		};
-
 		self.getOperations = function () {
 			var operations = [];
 			self.each(function () {
@@ -1566,12 +1614,12 @@
 			return(operations);
 		};
 
-		self.getProperties = function (propName) {
+		self.getProperties = function (propNames) {
 			var properties = [];
 			self.each(function () {
 				var $this   = $(this);
 				var data    = $this.data('jsea.grid');
-				properties = data.getProperties(propName);
+				properties = data.getProperties(propNames);
 				return false;
 			});
 			return (properties);
@@ -1607,18 +1655,6 @@
 			return(multiple);
 		};
 
-		self['import'] = function (original) {
-			return self.each(function () {
-				var $this   = $(this);
-				var data    = $this.data('jsea.grid');
-				var rule    = Page.DataRule('transfer');
-				var transfer= new DataTransfer(rule);
-				var rs      = transfer.read(original);
-				data.options.rs = rs;
-				data.load();
-			});
-		};
-
 		self.reload = function () {
 			return self.each(function () {
 				var $this   = $(this);
@@ -1648,10 +1684,11 @@
 
 		return this.each(function () {
 			var $this   = $(this);
+			var plugin  = $this.data('jsea.plugin');
 			var data    = $this.data('jsea.grid');
 			var options = typeof option == 'object' && option;
 
-			$this.data('jsea.plugin', self);
+			if (!plugin) $this.data('jsea.plugin', self);
 
 			if (!data && /destroy|hide/.test(option)) return;
 			if (!data) $this.data('jsea.grid', (data = new Grid(this, options)));
