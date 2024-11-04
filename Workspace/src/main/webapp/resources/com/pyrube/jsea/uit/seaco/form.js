@@ -739,15 +739,17 @@ window.Form.inited = function () {
 
 	SimpleForm.prototype.initForm = function () {
 		var $this = this;
-		// render JSEA components
+		// initialize the primary objects first
+		this.initPrimary();
+		// objectize all JSEA elements/components
 		this.components = JSEA.objectize(this.$element, {
 			form : this,
 			basename : this.options.basename,
 			funcname : this.options.funcname,
 			msContainer : Messages
 		});
-
-		this.initPrimary();
+		// stylize all JSEA elements/components (just buttons for now)
+		this.initStylization();
 
 		// cache form hash if it is a modifiable form
 		if (this.options.modifiable) { window.Form(function () { $this.hashCache = $this.hashCode(); }); }
@@ -763,6 +765,8 @@ window.Form.inited = function () {
 	};
 
 	SimpleForm.prototype.initPrimary = function () {};
+
+	SimpleForm.prototype.initStylization = function () {};
 
 	SimpleForm.prototype.initMeta = function () {};
 
@@ -1609,6 +1613,10 @@ window.Form.inited = function () {
 			}
 			$this.addAsyncloadingComponent($grid);
 		});
+	};
+
+	DetailForm.prototype.initStylization = function () {
+		var $this = this;
 		// stylize buttons
 		$('*[' + JSEA.Constants.ATTR_BUTTON_OPTIONS + ']', this.$element).each(function () {
 			var $button$ = $(this).data('jsea.plugin');
