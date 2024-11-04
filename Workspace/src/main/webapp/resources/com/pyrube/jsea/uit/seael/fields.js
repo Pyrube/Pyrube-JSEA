@@ -102,9 +102,9 @@
 		var $this = this;
 		if (this.options.emptiable) {
 			this.$empty = IconBuilder.build({ 
-				name : 'empty',
+				name  : 'empty',
 				title : 'icon.alt.empty-field',
-				method : function () { $this.emptyField(); }
+				event : function () { $this.emptyField(); }
 			}).hide();
 			this.$last.after(this.$empty);
 		}
@@ -2947,7 +2947,7 @@
 	};
 
 	Radios.prototype.getValue = function () {
-		var value = null;
+		var value = '';
 		$.each(this.options.group, function (i, pRadio) {
 			if (pRadio.isChecked()) {
 				value = pRadio.val();
