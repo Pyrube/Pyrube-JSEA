@@ -3,7 +3,7 @@
  * The validator object has following options:
  * basename  : base name (string)
  * funcname  : function name (string)
- * property  : HTML text field name (string) 
+ * property  : JSEA element name (string) 
  * msContainer: message set container for form validation (object)
  *       Tipbox for element tooltips
  *       Messages for messages box in Toolbar
@@ -49,25 +49,23 @@
 	
 	Validator.Constants = {
 		WHEN_EDIT       : 'E',
-		WHEN_SUBMIT     : 'S',
+		WHEN_SAVE       : 'S',
 		WHEN_BOTH       : 'B',
 		STAT_INITIAL    : -1,
 		STAT_PENDING    : -2,
 		STAT_FAILED     :  0,
 		STAT_OK         :  1
 	};
-	
+
+	Validator.BOUND_EVTYPES = ['focus', 'blur', 'change', 'keyup', 'choose', 'pull', 'rowadd', 'rowmodify', 'rowremove', 'upload', 'dummy'];
+
 	// validation settings:
 	//     @events an array. event to trigger validation
-	//     @when a string. E for user editing, S for form submitting and B as default for both
+	//     @when a string. E for user editing, S for form saving and B as default for both
 	Validator.SETTINGS = {
-		nonnullCols : {
-			when    : Validator.Constants.WHEN_SUBMIT,
-			events  : ['rowchange']
-		},
-		unique    : {
+		uniqueIndex : {
 			when    : Validator.Constants.WHEN_BOTH,
-			events  : ['rowchange']
+			events  : ['rowadd', 'rowmodify']
 		},
 		remote    : {
 			when    : Validator.Constants.WHEN_EDIT,
@@ -75,7 +73,7 @@
 		},
 		required    : {
 			when    : Validator.Constants.WHEN_BOTH,
-			events  : ['focus', 'keyup', 'blur', 'change', 'choose', 'pull']
+			events  : ['blur', 'change', 'focus', 'keyup', 'choose', 'pull', 'rowremove']
 		},
 		mimes     : {
 			when    : Validator.Constants.WHEN_BOTH,
@@ -89,7 +87,7 @@
 		date      : 'message.error.date-format-invalid',
 		email     : 'message.error.email-invalid',
 		url       : 'message.error.url-invalid',
-		required  : 'message.error.field-empty',
+		required  : 'message.error.value-empty',
 		length    : 'message.error.length-invalid',
 		minLength : 'message.error.length-too-short',
 		maxLength : 'message.error.length-too-large',
@@ -99,8 +97,7 @@
 		unique    : 'message.error.value-duplicate',
 		remote    : 'message.error.remote-pending',
 		mimes     : 'message.error.mimes-invalid',
-		nonnullCols : 'message.error.notnull-constraint-failed',
-		uniqueIndex : 'message.error.unique-constraint-violated'
+		uniqueIndex  : 'message.error.unique-constraint-violated'
 	};
 	
 	// restrictions
@@ -250,10 +247,9 @@
 	Validator.prototype.init = function (type, element, options) {
 		this.type      = type;
 		this.$element  = $(element);
-		this.$field    = this.$element.data('jsea.plugin') ? this.$element.data('jsea.plugin') : this.$element;
 		this.options   = this.getOptions(options);
 		
-		this.$field.addClass("validate");
+		this.$element.addClass("validate");
 		
 		// initialize valid rules
 		this.initValidRules();
@@ -286,18 +282,19 @@
 	
 	Validator.prototype.bindEvents = function () {
 		var $this = this;
-		var fieldInst = $this.getJseaFieldInst();
-		if (fieldInst != null) {
-			fieldInst.validateEventBind();
+		var one   = this.oneInstance();
+		var $one  = this.$one();
+		if (one && $.isFunction(one.validateEventBind)) {
+			one.validateEventBind();
 		} else {
 			$this.$element
-				.unbind(".validate")
-				.bind("focus.validate keyup.validate blur.validate change.validate choose.validate pull.validate rowchange.validate upload.validate",
+				.off('.validate')
+				.on(Validator.BOUND_EVTYPES.join('.validate '),
 					function (event, data) {
 						$this.value = undefined;
 						return (function () {
-							if ($this.value != $this.$field.val()) {
-								$this.value = $this.$field.val();
+							if ($this.value != $one.val()) {
+								$this.value = $one.val();
 								return $this.perform(event.type);
 							}
 							return true;
@@ -308,8 +305,9 @@
 	
 	Validator.prototype.prevalidate = function () {
 		var $this = this;
+		var $one  = this.$one();
 		
-		if (!!$this.$field.attr("disabled")) { return true; }
+		if (!!$one.attr('disabled')) { return true; }
 		
 		var elemValid  = true;
 		var ruleValid  = true;
@@ -337,18 +335,19 @@
 			}
 		}
 		if (this.options.form && this.options.form.isValidatable()) {
-			this.options.form.fireValidationEvent({source : this.getFieldName(), result : elemValid});
+			this.options.form.fireValidationEvent({source : this.resolveName(), result : elemValid});
 		}
 		return elemValid;
 	};
 	
 	Validator.prototype.perform = function (evtype) {
 		var $this = this;
-		
-		// reset the class and tip if have the tip before validate
-		$this.reset();
+		var $one  = this.$one();
 
-		if (!!$this.$field.attr("disabled")) { return true; }
+		// reset the class and tip if have the tip before validate
+		this.reset();
+
+		if (!!$one.attr('disabled')) { return true; }
 
 		var elemValid  = true;
 		var validType = $this.options.validType;
@@ -356,7 +355,7 @@
 		if (validRules) {
 			for (var ruleName in validRules) {
 				if (Validator.SETTINGS[ruleName]) {
-					if (Validator.SETTINGS[ruleName].when == Validator.Constants.WHEN_SUBMIT) continue;
+					if (Validator.SETTINGS[ruleName].when == Validator.Constants.WHEN_SAVE) continue;
 					if ($.inArray(evtype, Validator.SETTINGS[ruleName].events) == -1) continue;
 				}
 				var ruler;
@@ -380,12 +379,13 @@
 	
 	Validator.prototype.validate = function () {
 		var $this = this;
+		var $one  = this.$one();
 		
 		// reset the class and tip if have the tip before validate
-		$this.$field.removeClass("error");
-		$this.hideTip();
+		$one.removeClass('error');
+		this.hideTip();
 		
-		if (!!$this.$field.attr("disabled")) { return true; }
+		if (!!$one.attr('disabled')) { return true; }
 		
 		var elemValid  = true;
 		var ruleValid  = true;
@@ -411,12 +411,12 @@
 					ruleValid = !($.isFunction(ruler) && !$this.executeRule(ruler, ruleName));
 					if (!ruleValid) {
 						elemValid = false;
-						$this.$field.addClass("error");
+						$one.addClass('error');
 						if ($this.options.msContainer === Tipbox) {
 							$this.tip = $this.buildMessage(ruleName, true);
 							$this.showTip();
 						} else {
-							$this.options.msContainer.error($this.buildMessage(ruleName, false)).bind($this.getFieldName());
+							$this.options.msContainer.error($this.buildMessage(ruleName, false)).bind($this.resolveName());
 						}
 					}
 				}
@@ -424,40 +424,33 @@
 		}
 		return elemValid;
 	};
-	
-	Validator.prototype.getJseaFieldInst = function () {
-		var jseaType = this.$element.attr('jsea-field-type');
-		if (typeof jseaType != 'undefined' && jseaType != null && jseaType.length > 0) {
-			var fieldInst = this.$element.data('jsea.' + jseaType);
-			return fieldInst;
-		}
-		return null;
+
+	Validator.prototype.$one = function () {
+		var $one = this.$element.data('jsea.plugin');
+		return($one ? $one : this.$element);
 	};
-	
-	Validator.prototype.getFieldName = function () {
-		var fieldName = null;
-		var fieldInst = this.getJseaFieldInst();
-		if (fieldInst != null) {
-			fieldName = fieldInst.getFieldName();
-		} else {
-			fieldName = this.$element.attr("name");
-		}
-		return fieldName;
+
+	Validator.prototype.oneInstance = function () {
+		var clzName = this.$element.attr(JSEA.Constants.ATTR_CLASS);
+		return(clzName ? this.$element.data(clzName) : null);
 	};
-	
+
+	Validator.prototype.resolveName = function () {
+		var one = this.oneInstance();
+		return(one ? one.name() : this.$element.attr('name'));
+	};
+
+	Validator.prototype.resolveValue = function () {
+		var one = this.oneInstance();
+		return(one && $.isFunction(one.resolveValue) ? one.resolveValue() : this.$one().val());
+	};
+
 	Validator.prototype.executeRule = function (ruler, ruleName) {
-		var $this  = this;
-		var value  = null;
-		var fieldInst = $this.getJseaFieldInst();
-		if (fieldInst != null) {
-			value = fieldInst.getFieldValue();
-		} else {
-			value  = $this.$field.val();
-		}
-		var params = Validator.buildRuleParams($this.options.validRules, ruleName);
-		return (ruler.apply($this, [value, params]));
+		var value  = this.resolveValue();
+		var params = Validator.buildRuleParams(this.options.validRules, ruleName);
+		return (ruler.apply(this, [value, params]));
 	};
-	
+
 	Validator.prototype.buildMessage = function (ruleName, bDefault) {
 		var $this  = this;
 		var params = Validator.buildRuleParams($this.options.validRules, ruleName);
@@ -468,24 +461,27 @@
 	};
 	
 	Validator.prototype.showTip = function () {
-		if ($.isFunction(this.$field.failure)) {
-			this.$field.failure(this.tip);
+		var $one = this.$one();
+		if ($.isFunction($one.failure)) {
+			$one.failure(this.tip);
 		} else {
-			Tipbox.error(this.$field, this.tip);
-			this.$field.tipbox('show');
+			Tipbox.error($one, this.tip);
+			$one.tipbox('show');
 		}
 	};
 	
 	Validator.prototype.hideTip = function () {
-		if ($.isFunction(this.$field.rollback)) {
-			this.$field.rollback();
+		var $one = this.$one();
+		if ($.isFunction($one.rollback)) {
+			$one.rollback();
 		} else {
-			this.$field.tipbox('destroy');
+			$one.tipbox('destroy');
 		}
 	};
 	
 	Validator.prototype.setRequired = function (bRequired) {
-		this.$field.setRequired(bRequired);
+		var $one = this.$one();
+		$one.setRequired(bRequired);
 	};
 	
 	Validator.prototype.setStat = function (ruleName, stat) {
@@ -496,11 +492,11 @@
 		if (messageName === undefined) messageName = ruleName;
 		this.reset(ruleName);
 		this.options.validStats[ruleName] = Validator.Constants.STAT_FAILED;
-		this.$field.addClass("error");
+		this.$one().addClass('error');
 		this.tip = this.buildMessage(messageName, true);
 		this.showTip();
 		if (this.options.form && this.options.form.isValidatable()) {
-			this.options.form.fireValidationEvent({source : this.getFieldName(), result : false});
+			this.options.form.fireValidationEvent({source : this.resolveName(), result : false});
 		}
 	};
 	
@@ -508,29 +504,29 @@
 		if (messageName === undefined) messageName = ruleName;
 		this.reset(ruleName);
 		this.options.validStats[ruleName] = Validator.Constants.STAT_OK;
-		if (presented === true) this.$field.addClass("success");
+		if (presented === true) this.$one().addClass('success');
 		if (this.options.form && this.options.form.isValidatable()) {
-			this.options.form.fireValidationEvent({source : this.getFieldName(), result : true});
+			this.options.form.fireValidationEvent({source : this.resolveName(), result : true});
 		}
 	};
 	
 	Validator.prototype.reset = function (ruleName) {
 		this.options.validStats[ruleName] = Validator.Constants.STAT_INITIAL;
-		this.$field.removeClass("success");
-		this.$field.removeClass("error");
+		this.$one().removeClass('success')
+					.removeClass('error');
 		this.hideTip();
 	};
 	
 	Validator.prototype.destroy = function () {
 		this.reset();
-		this.$element.off(".validate").removeData('jsea.' + this.type);
-		this.$field.removeClass("validate");
-		this.$field = null;
+		this.$element.off(".validate")
+					.removeData('jsea.' + this.type)
+					.removeClass("validate");
 	};
 	
 	Validator.prototype.resolveOptions = function () {
 		var $element = this.$element;
-		var property = this.getFieldName();
+		var property = this.resolveName();
 		return {
 			property   : property,
 			validType  : ($element.attr(JSEA.Constants.ATTR_VALID_TYPE) || undefined),
