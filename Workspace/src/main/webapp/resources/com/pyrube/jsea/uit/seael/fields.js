@@ -2625,36 +2625,18 @@
 		});
 	};
 
-	Checkboxes.prototype.getFieldName = function () {
-		return this.options.name;
-	};
-
-	Checkboxes.prototype.getFieldValue = function () {
-		var values = [];
-		var checkedItems  = this.$element.find('[jsea-checkbox-options]').filter('.checked');
-		checkedItems.each(function (i, item) {
-			var $this = $(item);
-			var $checkbox = $this.data('jsea.field.checkbox').$checkbox;
-			values.push($checkbox.val());
-		});
-		return values.join(',');
-	};
-
 	Checkboxes.prototype.validatePerform = function () {
-		var validInst = this.$element.data('jsea.validator');
-		var value = this.getFieldValue();
-		if (value != null) {
-			value = value.trim();
-		}
-		if (validInst.value != value) {
-			validInst.value = value;
-			validInst.perform();
+		var validator = this.$element.data('jsea.validator');
+		var values = this.getValue();
+		if (!values.equals(validator.value)) {
+			validator.value = values;
+			validator.perform();
 		}
 	};
 
 	Checkboxes.prototype.validateEventBind = function () {
 		var $this = this;
-		this.$element.find('span[jsea-checkbox-options]').bind('click.validate', function () {			
+		this.$element.find('span[jsea-checkbox-options]').bind('click.validate', function () {
 			$this.validatePerform();
 		});
 	};
@@ -2948,29 +2930,12 @@
 		});
 	};
 
-	Radios.prototype.getFieldName = function () {
-		return this.options.name;
-	};
-
-	Radios.prototype.getFieldValue = function () {	
-		var value = '';
-		var checkedItem = this.$element.find('[jsea-radio-options]').filter('.checked');
-		if (checkedItem && checkedItem.size() > 0) {
-			var $radio = checkedItem.data('jsea.field.radio').$radio;
-			value = $radio.val();
-		}
-		return value;
-	};
-
 	Radios.prototype.validatePerform = function () {
-		var validInst = this.$element.data('jsea.validator');
-		var value = this.getFieldValue();
-		if (value != null) {
-			value = value.trim();
-		}
-		if (validInst.value != value) {
-			validInst.value = value;
-			validInst.perform();
+		var validator = this.$element.data('jsea.validator');
+		var value = this.getValue();
+		if (validator.value != value) {
+			validator.value = value;
+			validator.perform();
 		}
 	};
 
