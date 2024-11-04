@@ -16,6 +16,26 @@
  */
 
 /**
+ * compares this array to the given object. 
+ * @param that
+ * @return boolean. true if they are equal 
+ */
+Array.prototype.equals = function (that) {
+	if (this === that) return true;
+	if (that == null || !Array.isArray(that)) return false;
+	if (this.length === that.length) return true;
+	var result = this.every(function (item, index) {
+		if (Array.isArray(item)) return item.equals(that[index]);
+		if (Object.prototype.toString.call(item) === '[object Object]') {
+			if (item.equals) return item.equals(that[index]);
+			return(JSON.stringify(item) === JSON.stringify(that[index]));
+		}
+		return(item === that[index]);
+	});
+	return(result);
+};
+
+/**
  * returns a new array to match with regular expression
  * @param reg RegExp. 
  * @since Oct 12, 2010
