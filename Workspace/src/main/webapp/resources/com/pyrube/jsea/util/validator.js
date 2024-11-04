@@ -442,7 +442,7 @@
 
 	Validator.prototype.resolveValue = function () {
 		var one = this.oneInstance();
-		return(one && $.isFunction(one.resolveValue) ? one.resolveValue() : this.$one().val());
+		return(one && $.isFunction(one.getValue) ? one.getValue() : this.$one().val());
 	};
 
 	Validator.prototype.executeRule = function (ruler, ruleName) {
