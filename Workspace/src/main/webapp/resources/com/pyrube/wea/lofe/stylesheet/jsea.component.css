@@ -428,24 +428,29 @@ li.message span {
 li.message label { display: inline-block; vertical-align: middle; }
 li.message a.close {
 	position: absolute;
-	top: -5px; right: -5px;
-	width: 20px; height: 20px;
+	top: -6px; right: -6px;
+	width: 24px; height: 24px;
 	font-size: 0;
 	border: 1px solid transparent;
 	-webkit-transition: 0.2s;
 	-moz-transition: 0.2s;
 	-o-transition: 0.2s;
 	transition: 0.2s;
-	-webkit-border-radius: 10px;
-	-moz-border-radius: 10px;
-	border-radius: 10px;
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	border-radius: 12px;
 	background-size: 10px 10px;
 }
 li.message a.close:hover {  }
 
 .message-container .message-area { margin: 10px; }
-.message-container .message-area span { margin-right: 5px; width: 32px; height: 32px; background-size: 32px 32px; }
-.message-container .message-area label { line-height: 21px; font-size: 14px; }
+.message-container .message-area span {
+	position: absolute;
+	top: calc(50% - 32px);
+	width: 64px; height: 64px; 
+	background-size: 32px 32px;
+}
+.message-container .message-area label { margin-left: 64px; line-height: 21px; font-size: 14px; }
 
 .messages-container .messages-area {
 	vertical-align: top;
@@ -491,8 +496,8 @@ li.message a.close:hover {  }
 .messagebar .message-container .message-area { vertical-align: top; }
 .messagebar .message-container .message-area li.message {
 	padding: 5px;
-	min-height: 50px;
-	line-height: 50px;
+	min-height: 64px;
+	line-height: 60px;
 	-webkit-border-radius: 16px;
 	-moz-border-radius: 16px;
 	border-radius: 16px;
@@ -518,22 +523,17 @@ li.message a.close:hover {  }
 	}
 	.messagebar.show { top: 1px; }
 	.messagebar .message-container .message-area { margin: 0 10px; }
-	.messagebar .message-container .message-area li.message {
-		min-height: 32px;
-		line-height: 24px;
-		-webkit-border-radius: 32px;
-		-moz-border-radius: 32px;
-		border-radius: 32px;
-	}
+	.messagebar .message-container .message-area li.message { padding: 0; }
 	
 	.messagebar .message-container .message-area li.message a.close {
-		top: 5px; right: 5px;
-		width: 32px; height: 32px;
-		-webkit-border-radius: 32px;
-		-moz-border-radius: 32px;
-		border-radius: 32px;
+		top: calc(50% - 24px); right: 8px;
+		width: 48px; height: 48px;
+		-webkit-border-radius: 16px;
+		-moz-border-radius: 16px;
+		border-radius: 16px;
 		background-size: 16px 16px;
 	}
+	.messagebar .message-container .message-area li.message label { margin-right: 64px; }
 }
 
 /** Toolbar **/
@@ -1267,7 +1267,6 @@ li.message a.close:hover {  }
 .jsea_waiting { width: 0px; height: 0px; }
 
 .jsea_dialog .jsea_dialog_m {
-	position: absolute;
 	width: 100%;
 	-webkit-border-radius: 12px;
 	-moz-border-radius: 12px;
@@ -1277,14 +1276,12 @@ li.message a.close:hover {  }
 
 .jsea_dialog .jsea_dialog_m_h {
 	position: relative;
-	float: left;
 	width: 100%;
 	height: 0px;
 	background-color:var(--header-color);;
 	cursor: move;
 }
 .jsea_dialog .jsea_dialog_m_h_l {
-	float: left;
 	padding-top: 4px;
 	padding-left: 10px;
 	font-weight: bold;
@@ -1292,7 +1289,6 @@ li.message a.close:hover {  }
 	color: transparent;
 }
 .jsea_dialog .jsea_dialog_m_h_r {
-	float: right;
 	position: absolute;
 	top: 50%;
 	right: -12px;
@@ -1314,8 +1310,8 @@ li.message a.close:hover {  }
 	cursor: pointer;
 }
 
-.jsea_dialog .jsea_dialog_m_b_s { position: relative; width: 100%; float: left; }
-.jsea_dialog .jsea_dialog_m_b_s .jsea_dialog_m_b { padding: 5px 15px 15px 15px; width: 100%; max-height: 560px; overflow-y: auto; float: left; }
+.jsea_dialog .jsea_dialog_m_b_s { position: relative; width: 100%; }
+.jsea_dialog .jsea_dialog_m_b_s .jsea_dialog_m_b { padding: 5px 15px 15px 15px; width: 100%; min-height: 80px; max-height: 560px; overflow-y: auto; }
 
 
 /** Confirm/Yesno Dialog **/
@@ -1335,11 +1331,10 @@ li.message a.close:hover {  }
 	.jsea_dialog::before {
 		content: '';
 		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		min-height: 10px;
+		top: 0; left: 0;
+		display: block;
+		width: 100%; height: 100%;
+		min-height: 80px;
 		background-color: rgba(255, 255, 255, 0.5);
 		-webkit-backdrop-filter: blur(8px);
 		-moz-backdrop-filter: blur(8px);
