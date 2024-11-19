@@ -542,7 +542,8 @@ window.Form.inited = function () {
 
 	BaseForm.prototype.destroy0 = function () {
 		this.enabled = false;
-		// and then, destroy the JSEA objects in this form
+		// and then, destroy the JSEA One Objects in this form
+		this.objects = null;
 		JSEA.destroy(this.$element);
 		// and remove this JSEA form data
 		this.$element
@@ -604,6 +605,18 @@ window.Form.inited = function () {
 	// ===================================
 
 	Plugin.prototype = $.extend({}, One.Plugin.prototype);
+
+	Plugin.prototype.find = function (objId) {
+		var $obj;
+		this.each(function () {
+			var $this   = $(this);
+			var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+			if (($obj = data.objects.fields[objId])    != null) return false;
+			if (($obj = data.objects.clickings[objId]) != null) return false;
+			return false;
+		});
+		return $obj;
+	};
 
 	Plugin.prototype.former = function () {
 		var $prev$;
@@ -721,9 +734,9 @@ window.Form.inited = function () {
 	SimpleForm.VERSION  = '1.0.0';
 
 	SimpleForm.DEFAULTS = $.extend({}, $.fn.baseform.Constructor.DEFAULTS, {
-		preHandler    : function () { return true; },
+		preHandler    : null,
 		preHandlers   : null,
-		postHandler   : function () {},
+		postHandler   : null,
 		postHandlers  : null,
 		validatable   : true,
 		modifiable    : false,
@@ -741,34 +754,46 @@ window.Form.inited = function () {
 		var $this = this;
 		// initialize the primary objects first
 		this.initPrimary();
+		// initialize Meta data
+		this.initMeta();
 		// objectize all JSEA elements/components
-		this.components = JSEA.objectize(this.$element, {
+		this.initOneObjects();
+		// stylize all JSEA elements/components (just buttons for now)
+		this.initStylization();
+		// initialize the validator component
+		this.initValidation();
+		// initialize finally
+		this.finalInitialization();
+		// cache form hash if it is a modifiable form
+		if (this.options.modifiable) { window.Form(function () { $this.hashCache = $this.hashCode(); }); }
+	};
+
+	SimpleForm.prototype.initPrimary = function () {};
+
+	SimpleForm.prototype.initMeta = function () {};
+
+	SimpleForm.prototype.initOneObjects = function () {
+		this.objects = JSEA.objectize(this.$element, {
 			form : this,
 			basename : this.options.basename,
 			funcname : this.options.funcname,
 			msContainer : Messages
 		});
-		// stylize all JSEA elements/components (just buttons for now)
-		this.initStylization();
-
-		// cache form hash if it is a modifiable form
-		if (this.options.modifiable) { window.Form(function () { $this.hashCache = $this.hashCode(); }); }
-		// initialize the validator component
-		if (this.options.validatable) { 
-			// activate validation, if it is a validatable form
-			this.validators = this.components['validator'];
-			// pre-validate
-			window.Form(function () { $this.validators.prevalidate(); });
-		}
-
-		this.initMeta();
 	};
-
-	SimpleForm.prototype.initPrimary = function () {};
 
 	SimpleForm.prototype.initStylization = function () {};
 
-	SimpleForm.prototype.initMeta = function () {};
+	SimpleForm.prototype.initValidation  = function () {
+		var $this = this;
+		if (this.options.validatable) { 
+			// activate validation, if it is a validatable form
+			this.validators = this.objects.components['validator'];
+			// pre-validate
+			window.Form(function () { $this.validators.prevalidate(); });
+		}
+	};
+
+	SimpleForm.prototype.finalInitialization = function () {};
 
 	SimpleForm.prototype.initEvents = function () {
 		this.initOperationEvents();
@@ -824,6 +849,24 @@ window.Form.inited = function () {
 		else this.$element.trigger('validatesuccess');
 	};
 
+	SimpleForm.prototype.setPreHandler = function (preHandler) {
+		this.options.preHandler = preHandler;
+	};
+
+	SimpleForm.prototype.addPreHandler = function (actname, preHandler) {
+		if (!this.options.preHandlers) this.options.preHandlers = {};
+		this.options.preHandlers[actname] = preHandler;
+	};
+
+	SimpleForm.prototype.setPostHandler = function (postHandler) {
+		this.options.postHandler = postHandler;
+	};
+
+	SimpleForm.prototype.addPostHandler = function (actname, postHandler) {
+		if (!this.options.postHandlers) this.options.postHandlers = {};
+		this.options.postHandlers[actname] = postHandler;
+	};
+
 	SimpleForm.prototype.perform = function (action) {
 		//clear error message first
 		Messages.clear();
@@ -842,6 +885,22 @@ window.Form.inited = function () {
 		// do action
 		var mode = action.mode || this.options.mode;
 		this[mode](action);
+	};
+
+	SimpleForm.prototype.save = function (action) {
+		var $this = this;
+		$.extend(action, { callback : function (data, xhr) {
+			if (String(action.success).toLowerCase() !== 'false') { // if it is false, it means no success message shows up
+				Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
+			}
+			var actionPostHandler = $this.options.postHandler;
+			if (actionPostHandler && $.isFunction(actionPostHandler)) actionPostHandler(data, xhr);
+			if ($.isPlainObject($this.options.postHandlers)) {
+				actionPostHandler = $this.options.postHandlers[action.name];
+				if ($.isFunction(actionPostHandler)) actionPostHandler(data, xhr);
+			}
+		} });
+		this.post(action);
 	};
 
 	SimpleForm.prototype.post = function (action) {
@@ -961,6 +1020,38 @@ window.Form.inited = function () {
 
 		this.extend($.fn.baseform.prototype);
 
+		self.setPreHandler = function (preHandler) {
+			return this.each(function () {
+				var $this   = $(this);
+				var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+				data.setPreHandler(preHandler);
+			});
+		};
+
+		self.addPreHandler = function (actname, preHandler) {
+			return this.each(function () {
+				var $this   = $(this);
+				var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+				data.addPreHandler(actname, preHandler);
+			});
+		};
+
+		self.setPostHandler = function (postHandler) {
+			return this.each(function () {
+				var $this   = $(this);
+				var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+				data.setPostHandler(postHandler);
+			});
+		};
+
+		self.addPostHandler = function (actname, postHandler) {
+			return this.each(function () {
+				var $this   = $(this);
+				var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+				data.addPostHandler(actname, postHandler);
+			});
+		};
+
 		self.perform = function (action) {
 			return self.each(function () {
 				var $this   = $(this);
@@ -995,6 +1086,38 @@ window.Form.inited = function () {
 			var $this   = $(this);
 			var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
 			data.perform(action);
+		});
+	};
+
+	Plugin.prototype.setPreHandler = function (preHandler) {
+		return this.each(function () {
+			var $this   = $(this);
+			var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+			data.setPreHandler(preHandler);
+		});
+	};
+
+	Plugin.prototype.addPreHandler = function (actname, preHandler) {
+		return this.each(function () {
+			var $this   = $(this);
+			var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+			data.addPreHandler(actname, preHandler);
+		});
+	};
+
+	Plugin.prototype.setPostHandler = function (postHandler) {
+		return this.each(function () {
+			var $this   = $(this);
+			var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+			data.setPostHandler(postHandler);
+		});
+	};
+
+	Plugin.prototype.addPostHandler = function (actname, postHandler) {
+		return this.each(function () {
+			var $this   = $(this);
+			var data    = $this.data($this.attr(JSEA.Constants.ATTR_CLASS));
+			data.addPostHandler(actname, postHandler);
 		});
 	};
 
@@ -1092,7 +1215,7 @@ window.Form.inited = function () {
 		this.initPrimary();
 		// initialize a search-box for this grid form
 		if (this.options.filterable) { this.initSearchbox(); }
-		// render JSEA components
+		// render JSEA One Objects
 		JSEA.objectize(this.$element);
 	};
 
@@ -1615,15 +1738,6 @@ window.Form.inited = function () {
 		});
 	};
 
-	DetailForm.prototype.initStylization = function () {
-		var $this = this;
-		// stylize buttons
-		$('*[' + JSEA.Constants.ATTR_BUTTON_OPTIONS + ']', this.$element).each(function () {
-			var $button$ = $(this).data('jsea.plugin');
-			$button$.stylize($this.options.model);
-		});
-	};
-
 	DetailForm.prototype.initMeta = function () {
 		if (!this.options.nested && !this.options.metaless) {
 			// prepare data information for Toolbar if this form is not nested or not metaless
@@ -1636,6 +1750,15 @@ window.Form.inited = function () {
 				status   : this.getProperty(this.options.statProp),
 			});
 		}
+	};
+
+	DetailForm.prototype.initStylization = function () {
+		var $this = this;
+		// stylize buttons
+		$('*[' + JSEA.Constants.ATTR_BUTTON_OPTIONS + ']', this.$element).each(function () {
+			var $button$ = $(this).data('jsea.plugin');
+			$button$.stylize($this.options.model);
+		});
 	};
 
 	DetailForm.prototype.initEvents = function () {
@@ -1780,20 +1903,16 @@ window.Form.inited = function () {
 	DetailForm.prototype.savexit = function (action) {
 		var $this = this;
 		$.extend(action, { callback : function (data, xhr) {
-			Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
-			$this.backward(true, xhr.getResponseHeader('Target-Url'));
-		} });
-		this.post(action);
-	};
-
-	DetailForm.prototype.save = function (action) {
-		var $this = this;
-		$.extend(action, { callback : function (data, xhr) {
-			Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
+			if (String(action.success).toLowerCase() !== 'false') { // if it is false, it means no success message shows up
+				Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
+			}
+			var actionPostHandler = $this.options.postHandler;
+			if (actionPostHandler && $.isFunction(actionPostHandler)) actionPostHandler(data, xhr);
 			if ($.isPlainObject($this.options.postHandlers)) {
-				var actionPostHandler = $this.options.postHandlers[action.name];
+				actionPostHandler = $this.options.postHandlers[action.name];
 				if ($.isFunction(actionPostHandler)) actionPostHandler(data, xhr);
 			}
+			$this.backward(true, xhr.getResponseHeader('Target-Url'));
 		} });
 		this.post(action);
 	};
@@ -1974,7 +2093,15 @@ window.Form.inited = function () {
 	PopupForm.prototype.savexit = function (action) {
 		var $this = this;
 		$.extend(action, { callback : function () {
-			Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
+			if (String(action.success).toLowerCase() !== 'false') { // if it is false, it means no success message shows up
+				Message.success(action.success || JSEA.resolveI18nKey($this.options.funcname, ['success', $this.options.operation, action.name]));
+			}
+			var actionPostHandler = $this.options.postHandler;
+			if (actionPostHandler && $.isFunction(actionPostHandler)) actionPostHandler(data, xhr);
+			if ($.isPlainObject($this.options.postHandlers)) {
+				actionPostHandler = $this.options.postHandlers[action.name];
+				if ($.isFunction(actionPostHandler)) actionPostHandler(data, xhr);
+			}
 			$this.okay(action);
 		} });
 		this.post(action);
@@ -2078,7 +2205,7 @@ window.Form.inited = function () {
 		current     : 0,
 		actions     : [ { enabled : true, name : 'previous', mode : 'previous' }, 
 						{ enabled : true, name : 'next',     mode : 'next' }, 
-						{ enabled : true, name : 'ok',       mode : 'submit' }],
+						{ enabled : true, name : 'okay',     mode : 'submit' }],
 		metaless    : true,
 		validatable : false
 	});
@@ -2090,8 +2217,10 @@ window.Form.inited = function () {
 
 	WizardForm.prototype.constructor = WizardForm;
 
-	WizardForm.prototype.initPrimary = function () {
-		this.$wizard = this.components['wizard'];
+	WizardForm.prototype.finalInitialization = function () {
+		var $this = this;
+		// activate Wizard component
+		this.$wizard = this.objects.components['wizard'];
 		// move to current step
 		this.move(this.$wizard.getStep(this.options.current));
 	};
