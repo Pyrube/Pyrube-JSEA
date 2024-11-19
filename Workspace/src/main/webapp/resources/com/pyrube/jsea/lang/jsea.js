@@ -302,6 +302,7 @@ var JSEA = {
 	 */
 	objectize: function (context, options) {
 		if (!context) context = document;
+		var objects = { clickings : {}, fields : {}, components : {} };
 		// objectize all buttons/links
 		for (var type in JSEA.Constants.CLICKINGS) {
 			var a = JSEA.Constants.CLICKINGS[type];
@@ -312,7 +313,12 @@ var JSEA = {
 					selector += ('*[' + a[i] + ']');
 				}
 			} else selector = ('*[' + a + ']')
-			$(selector, context).each(function () { $(this)[type](options); });
+			$(selector, context).each(function () { 
+				var $this = $(this);
+				var id    = $this.attr('id');
+				var $one  = $this[type](options);
+				objects.clickings[id] = $one;
+			});
 		}
 		// objectize all fields
 		for (var type of JSEA.Constants.FIELD_TYPES) {
@@ -324,7 +330,13 @@ var JSEA = {
 					selector += ('*[' + a[i] + ']');
 				}
 			} else selector = ('*[' + a + ']')
-			$(selector, context).each(function () { $(this)[type](options); });
+			$(selector, context).each(function () {
+				var $this = $(this);
+				var id    = $this.attr('id');
+				var $one  = $this[type](options);
+				objects.fields[id] = $one;
+			
+			});
 		}
 		// objectize all components
 		var components = {};
@@ -337,12 +349,12 @@ var JSEA = {
 					selector += ('*[' + a[i] + ']');
 				}
 			} else selector = ('*[' + a + ']')
-			components[component] = $(selector, context)[component](options);
+			objects.components[component] = $(selector, context)[component](options);
 		}
 		// bind tool-tips for all elements with JSEA.Constants.ATTR_TOOLTIPS
 		Tipbox.bind($(context));
 		
-		return components;
+		return objects;
 	},
 	/**
 	 * destroy the JSEA objects in the given context
@@ -1346,7 +1358,18 @@ class One {
 
 		// PAGE PUBLIC METHOD DEFINITION
 		// ===============================
-		
+
+		self.form = function (id) {
+			var $form$ = null;
+			self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.page');
+				if (id === undefined) $form$ = data.facade; // instead of currentForm
+				// else // to-do return form by id
+			});
+			return($form$);
+		};
+
 		self.currentForm = function () {
 			var $form$ = null;
 			self.each(function () {
@@ -1414,6 +1437,17 @@ class One {
 				var $this   = $(this);
 				var data    = $this.data('jsea.page');
 				method = data.findMethod(type, name);
+				return false;
+			});
+			return method;
+		};
+
+		self.ElemMethod = function (name) {
+			var method = null;
+			self.each(function () {
+				var $this   = $(this);
+				var data    = $this.data('jsea.page');
+				method = data.findMethod('elem', name);
 				return false;
 			});
 			return method;
