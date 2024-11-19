@@ -200,6 +200,9 @@
 			this.emptyConcrete();
 		}
 		var fnEmpty = this.options.onEmpty;
+		if (typeof fnEmpty === 'string') {
+			fnEmpty = Page.ElemMethod(fnEmpty);
+		}
 		if ($.isFunction(fnEmpty)) {
 			fnEmpty.apply(this.$element.data('jsea.plugin'), []);
 		}
@@ -830,6 +833,9 @@
 			JSEA.value($context, fieldName, fieldValue);
 		}
 		var fnChoose = this.options.onChoose;
+		if (typeof fnChoose === 'string') {
+			fnChoose = Page.ElemMethod(fnChoose);
+		}
 		if ($.isFunction(fnChoose)) {
 			fnChoose.apply(this.$element.data('jsea.plugin'), [data]);
 		}
@@ -1118,8 +1124,11 @@
 					$this.$progressbar.progressbar("setValue", 100);
 					$this.$element.trigger('change');
 					var fnSuccess = $this.options.onSuccess;
+					if (typeof fnSuccess === 'string') {
+						fnSuccess = Page.ElemMethod(fnSuccess);
+					}
 					if ($.isFunction(fnSuccess)) {
-						fnSuccess();
+						fnSuccess.apply($this.$element.data('jsea.plugin'), []);
 					}
 					Message.success(data.message);
 				} else {
@@ -1626,6 +1635,9 @@
 		}
 		if ((!this.options.manualonly || this.manualTriggering) && oldValue != value) {
 			var fnChange = $this.options.onChange;
+			if (typeof fnChange === 'string') {
+				fnChange = Page.ElemMethod(fnChange);
+			}
 			if ($.isFunction(fnChange)) {
 				fnChange.apply($this.$element.data('jsea.plugin'), [value, oldValue]);
 			}
@@ -2217,7 +2229,7 @@
 		if ((!this.options.manualonly || this.manualTriggering) && oldValue != value) {
 			var fnChange = $this.options.onChange;
 			if (typeof fnChange === 'string') {
-				fnChange = Page.Method('elem', fnChange);
+				fnChange = Page.ElemMethod(fnChange);
 			}
 			if ($.isFunction(fnChange)) {
 				fnChange.apply($this.$element.data('jsea.plugin'), [value, oldValue]);
@@ -2459,7 +2471,7 @@
 } (jQuery);
 
 /**
- * JSEA Field group
+ * JSEA Multi-field
  * 
  * @author Aranjuez
  * @version Dec 01, 2009
@@ -2469,80 +2481,213 @@
 +function ($) {
 	'use strict';
 
-	// FIELDS PUBLIC CLASS DEFINITION
-	// ================================
+	// FIELD.MULTI PUBLIC CLASS DEFINITION
+	// =====================================
 	
-	var Fields = function (element, options) {
-		this.init('fields', element, options);
+	var MultiField = function (element, options) {
+		this.init('field.multi', element, options);
 	};
 
-	Fields.VERSION = '1.0.0';
+	MultiField.VERSION = '1.0.0';
 
-	Fields.DEFAULTS = $.extend({}, $.fn.field.Constructor.DEFAULTS, {
-		group : []
+	MultiField.DEFAULTS = $.extend({}, $.fn.field.Constructor.DEFAULTS, {
+		name: '',
+		group : [],
+		singleItems : null,
+		onCheck : null
 	});
 
-	// NOTE: FIELDS EXTENDS FIELD
-	// ============================
+	// NOTE: FIELD.MULTI EXTENDS FIELD
+	// =================================
 
-	Fields.prototype = $.extend({}, $.fn.field.Constructor.prototype);
+	MultiField.prototype = $.extend({}, $.fn.field.Constructor.prototype);
 
-	Fields.prototype.constructor = Fields;
+	MultiField.prototype.constructor = MultiField;
 
-	Fields.prototype.setVisible = function (bVisible) {
+	MultiField.prototype.buildSingleFields = function (jseaAttrName, fieldType) {
+		var singleItems = this.options.singleItems;
+		if ($.isArray(singleItems)) {
+			for (var i = 0; i < singleItems.length; i++) {
+				var $wrapper = $(document.createElement('LI')).addClass('element').appendTo(this.$element);
+				var label, value;
+				if ($.isPlainObject(singleItems[i])) {
+					value = singleItems[i].value;
+					label = singleItems[i].label;
+				} else {
+					value = singleItems[i];
+					label = (this.options.i18nPrefix ? (this.options.i18nPrefix + '.') : '') + value;
+				}
+				var $single = $(document.createElement('SPAN'))
+									.attr('id', this.options.id)
+									.attr('name', this.options.name)
+									.addClass(fieldType)
+									.attr(jseaAttrName, '{}')
+									.attr(JSEA.Constants.ATTR_VALUE, value)
+									.attr(JSEA.Constants.ATTR_LABEL, label)
+									.appendTo($wrapper);
+				$single[fieldType]({
+					id         : this.options.id,
+					name       : this.options.name,
+					i18nPrefix : this.options.i18nPrefix
+				})
+			}
+		}
+	},
+
+	MultiField.prototype.setVisible = function (bVisible) {
 		var $cell = this.$element.closest('li.element');
 		(bVisible) ? $cell.show() : $cell.hide();
 	};
 
-	Fields.prototype.setDisabled = function (bDisabled) {
+	MultiField.prototype.setDisabled = function (bDisabled) {
 		$.each(this.options.group, function (i, p) {
 			p.setDisabled(bDisabled);
 		});
 	};
 
-	Fields.prototype.getDefaults = function () {
+	MultiField.prototype.getDefaults = function () {
 		return Fields.DEFAULTS;
 	};
 
-	Fields.prototype.getOptions = function (options) {
+	MultiField.prototype.getOptions = function (options) {
 		options = $.extend({}, this.getDefaults(), this.$element.data(), options);
 		
 		return options;
 	};
 
-	// FIELDS PLUGIN DEFINITION
-	// ==========================
+	// FIELD.MULTI PLUGIN DEFINITION
+	// ===============================
 
 	function Plugin(option) {
 		return this.each(function () {
 			var $this = $(this);
 
-			var data = $this.data('jsea.fields');
+			var data = $this.data('jsea.field.multi');
 			var options = typeof option == 'object' && option;
 
 			if (!data && /destroy|hide/.test(option)) return;
-			if (!data) $this.data('jsea.fields', (data = new Fields(this, options)));
+			if (!data) $this.data('jsea.field.multi', (data = new MultiField(this, options)));
 			if (typeof option == 'string') data[option]();
 		});
 	}
 
-	// FIELD.TEXT REUSE METHOD EXTENDS FIELD
-	// =======================================
+	// FIELD.MULTI REUSE METHOD EXTENDS FIELD
+	// ========================================
 
 	Plugin.prototype = $.extend({}, $.fn.field.prototype);
 
 	Plugin.prototype.constructor = Plugin;
 
-	var old = $.fn.fields;
+	var old = $.fn.multifield;
 
-	$.fn.fields             = Plugin;
-	$.fn.fields.Constructor = Fields;
+	$.fn.multifield             = Plugin;
+	$.fn.multifield.Constructor = MultiField;
 
-	// FIELDS NO CONFLICT
-	// ====================
+	// FIELD.MULTI NO CONFLICT
+	// =========================
 
-	$.fn.fields.noConflict = function () {
-		$.fn.fields = old;
+	$.fn.multifield.noConflict = function () {
+		$.fn.multifield = old;
+		return this;
+	};
+
+} (jQuery);
+
+/**
+ * JSEA Single-field
+ * 
+ * @author Aranjuez
+ * @version Dec 01, 2009
+ * @since Pyrube-JSEA 1.0
+ * @dependence: jQuery: jquery.js v1.11.3
+ */
++function ($) {
+	'use strict';
+
+	// FIELD.SINGLE PUBLIC CLASS DEFINITION
+	// ======================================
+	
+	var SingleField = function (element, options) {
+		this.init('field.single', element, options);
+	};
+
+	SingleField.VERSION = '1.0.0';
+
+	SingleField.DEFAULTS = $.extend({}, $.fn.field.Constructor.DEFAULTS);
+
+	// NOTE: FIELD.SINGLE EXTENDS FIELD
+	// ==================================
+
+	SingleField.prototype = $.extend({}, $.fn.field.Constructor.prototype);
+
+	SingleField.prototype.constructor = SingleField;
+
+	SingleField.prototype.beforeInit = function () {
+		var $wrapper = this.$element.closest('li.element');
+		var value    = this.getValue();
+		var label    = this.$element.attr(JSEA.Constants.ATTR_LABEL) || (this.options.i18nPrefix ? (this.options.i18nPrefix + '.') : '') + value;
+		var $label = $wrapper.find('label');
+		if ($label.length == 0) {
+			$label = $(document.createElement('LABEL'))
+						.text(JSEA.localizeMessage(label))
+						.insertAfter(this.$element);
+		}
+		var $input = $wrapper.find('input');
+		if ($input.length == 0) {
+			var fieldType = this.resolveFieldType();
+			$input = $(document.createElement('INPUT'))
+						.attr('id', this.options.id)
+						.attr('name', this.options.name)
+						.addClass(fieldType)
+						.attr('type', fieldType)
+						.val(value)
+						.appendTo($wrapper);
+		}
+	},
+
+	SingleField.prototype.getDefaults = function () {
+		return SingleField.DEFAULTS;
+	};
+
+	SingleField.prototype.getOptions = function (options) {
+		options = $.extend({}, this.getDefaults(), this.$element.data(), options);
+		
+		return options;
+	};
+
+	// FIELD.SINGLE PLUGIN DEFINITION
+	// ================================
+
+	function Plugin(option) {
+		return this.each(function () {
+			var $this = $(this);
+
+			var data = $this.data('jsea.field.single');
+			var options = typeof option == 'object' && option;
+
+			if (!data && /destroy|hide/.test(option)) return;
+			if (!data) $this.data('jsea.field.single', (data = new SingleField(this, options)));
+			if (typeof option == 'string') data[option]();
+		});
+	}
+
+	// FIELD.SINGLE REUSE METHOD EXTENDS FIELD
+	// =========================================
+
+	Plugin.prototype = $.extend({}, $.fn.field.prototype);
+
+	Plugin.prototype.constructor = Plugin;
+
+	var old = $.fn.singlefield;
+
+	$.fn.singlefield             = Plugin;
+	$.fn.singlefield.Constructor = SingleField;
+
+	// FIELD.SINGLE NO CONFLICT
+	// ==========================
+
+	$.fn.singlefield.noConflict = function () {
+		$.fn.singlefield = old;
 		return this;
 	};
 
@@ -2559,29 +2704,27 @@
 +function ($) {
 	'use strict';
 
-	// FIELDS.CHECKBOXES PUBLIC CLASS DEFINITION
-	// ===========================================
+	// FIELD.CHECKBOXES PUBLIC CLASS DEFINITION
+	// ==========================================
 
 	var Checkboxes = function (element, options) {
-		this.init('fields.checkboxes', element, options);
+		this.init('field.checkboxes', element, options);
 	};
 
 	Checkboxes.VERSION  = '1.0.0';
 
-	Checkboxes.DEFAULTS = $.extend({}, $.fn.fields.Constructor.DEFAULTS, {
-		name : '',
-		onCheck : null
-	});
+	Checkboxes.DEFAULTS = $.extend({}, $.fn.multifield.Constructor.DEFAULTS);
 
-	// NOTE: FIELDS.CHECKBOXES EXTENDS FIELDS
-	// ========================================
+	// NOTE: FIELD.CHECKBOXES EXTENDS FIELDS
+	// =======================================
 
-	Checkboxes.prototype = $.extend({}, $.fn.fields.Constructor.prototype);
+	Checkboxes.prototype = $.extend({}, $.fn.multifield.Constructor.prototype);
 
 	Checkboxes.prototype.constructor = Checkboxes;
 	
 	Checkboxes.prototype.initField = function () {
 		var $this = this;
+		this.buildSingleFields(JSEA.Constants.ATTR_CHECKBOX_OPTIONS, 'checkbox');
 		this.$element.find('*[' + JSEA.Constants.ATTR_CHECKBOX_OPTIONS + ']').each(function (i, item) {
 			var $item = $(item);
 			$this.options.group[i] = $item.checkbox();
@@ -2593,8 +2736,12 @@
 		this.$element.on('click.jsea', '.checkbox:not(.disabled)', function () {
 			var pCheckbox = $(this).data('jsea.plugin');
 			pCheckbox.setChecked(!pCheckbox.isChecked());
-			if ($.isFunction($this.options.onCheck)) {
-				$this.options.onCheck.apply(pCheckbox, [ $this.getValue() ]);
+			var fnCheck = $this.options.onCheck;
+			if (typeof fnCheck === 'string') {
+				fnCheck = Page.ElemMethod(fnCheck);
+			}
+			if ($.isFunction(fnCheck)) {
+				fnCheck.apply(pCheckbox, [ $this.getValue() ]);
 			}
 			$this.$element.trigger('check', [ pCheckbox, $this.getValue() ]);
 		});
@@ -2671,16 +2818,16 @@
 		return options;
 	};
 
-	// FIELDS.CHECKBOXES PLUGIN DEFINITION
-	// =====================================
+	// FIELD.CHECKBOXES PLUGIN DEFINITION
+	// ====================================
 
 	function Plugin(option) {
 		var self = this;
 
-		// FIELDS.RADIOS PUBLIC METHOD EXTENDS FIELDS
-		// ============================================
+		// FIELD.CHECKBOXES PUBLIC METHOD EXTENDS FIELD.MULTI
+		// ====================================================
 
-		this.extend($.fn.fields.prototype);
+		this.extend($.fn.multifield.prototype);
 
 		return this.each(function () {
 			var $this   = $(this);
@@ -2691,7 +2838,7 @@
 			if (!plugin) $this.data('jsea.plugin', self);
 
 			if (!data && /destroy|hide/.test(option)) return;
-			if (!data) $this.data('jsea.fields.checkboxes', (data = new Checkboxes(this, options)));
+			if (!data) $this.data('jsea.field.checkboxes', (data = new Checkboxes(this, options)));
 			if (typeof option == 'string') data[option]();
 		});
 	}
@@ -2701,8 +2848,8 @@
 	$.fn.checkboxes             = Plugin;
 	$.fn.checkboxes.Constructor = Checkboxes;
 
-	// CHECKBOXES NO CONFLICT
-	// ========================
+	// FIELD.CHECKBOXES NO CONFLICT
+	// ==============================
 
 	$.fn.checkboxes.noConflict = function () {
 		$.fn.checkboxes = old;
@@ -2731,27 +2878,24 @@
 
 	Checkbox.VERSION  = '1.0.0';
 
-	Checkbox.DEFAULTS = $.extend({}, $.fn.field.Constructor.DEFAULTS);
+	Checkbox.DEFAULTS = $.extend({}, $.fn.singlefield.Constructor.DEFAULTS);
 
-	// NOTE: FIELD.CHECKBOX EXTENDS FIELD
-	// ====================================
+	// NOTE: FIELD.CHECKBOX EXTENDS FIELD.SINGLE
+	// ===========================================
 
-	Checkbox.prototype = $.extend({}, $.fn.field.Constructor.prototype);
+	Checkbox.prototype = $.extend({}, $.fn.singlefield.Constructor.prototype);
 
 	Checkbox.prototype.constructor = Checkbox;
 
 	Checkbox.prototype.initField = function () {
+		this.beforeInit();
 		this.$wrapper  = this.$element.closest('li.element');
 		this.$checkbox = this.$wrapper.find(':checkbox');
 		this.$checkbox.hide();
-		
-		this.$label = this.$element.parent().find('label');
-		if (this.$label.length == 0) {
-			this.$label = $(document.createElement('LABEL')).appendTo(this.$element.parent());
-		}
-		if (this.options.i18nPrefix) {
-			this.$label.text(JSEA.localizeMessage(this.options.i18nPrefix + '.' + this.getValue()));
-		}
+	};
+
+	Checkbox.prototype.resolveFieldType = function () {
+		return('checkbox');
 	};
 
 	Checkbox.prototype.getValue = function () {
@@ -2794,10 +2938,10 @@
 	function Plugin(option) {
 		var self = this;
 
-		// FIELD.CHECKBOX PUBLIC METHOD EXTENDS FIELD
-		// ============================================
+		// FIELD.CHECKBOX PUBLIC METHOD EXTENDS FIELD.SINGLE
+		// ===================================================
 
-		self.extend($.fn.field.prototype);
+		self.extend($.fn.singlefield.prototype);
 
 		// FIELD.CHECKBOX PUBLIC METHOD DEFINITION
 		// =========================================
@@ -2866,29 +3010,27 @@
 +function ($) {
 	'use strict';
 
-	// RADIOS PUBLIC CLASS DEFINITION
-	// ================================
+	// FIELD.RADIOS PUBLIC CLASS DEFINITION
+	// ======================================
 
 	var Radios = function (element, options) {
-		this.init('fields.radios', element, options);
+		this.init('field.radios', element, options);
 	};
 
 	Radios.VERSION  = '1.1.0';
 
-	Radios.DEFAULTS = $.extend({}, $.fn.fields.Constructor.DEFAULTS, {
-		name: '',
-		onCheck : null
-	});
+	Radios.DEFAULTS = $.extend({}, $.fn.multifield.Constructor.DEFAULTS);
 
-	// NOTE: RADIOS EXTENDS FIELDS
-	// =============================
+	// NOTE: FIELD.RADIOS EXTENDS FIELD.MULTI
+	// ========================================
 
-	Radios.prototype = $.extend({}, $.fn.fields.Constructor.prototype);
+	Radios.prototype = $.extend({}, $.fn.multifield.Constructor.prototype);
 
 	Radios.prototype.constructor = Radios;
 
 	Radios.prototype.initField = function () {
 		var $this = this;
+		this.buildSingleFields(JSEA.Constants.ATTR_RADIO_OPTIONS, 'radio');
 		this.$element.find('*[' + JSEA.Constants.ATTR_RADIO_OPTIONS + ']').each(function (i, item) {
 			var $item = $(item);
 			$this.options.group[i] = $item.radio();
@@ -2901,8 +3043,12 @@
 			$this.uncheckAll();
 			var pRadio = $(this).data('jsea.plugin');
 			pRadio.setChecked(true);
-			if ($.isFunction($this.options.onCheck)) {
-				$this.options.onCheck.apply(pRadio, [ $this.getValue() ]);
+			var fnCheck = $this.options.onCheck;
+			if (typeof fnCheck === 'string') {
+				fnCheck = Page.ElemMethod(fnCheck);
+			}
+			if ($.isFunction(fnCheck)) {
+				fnCheck.apply(pRadio, [ $this.getValue() ]);
 			}
 			$this.$element.trigger('check', [ pRadio, $this.getValue() ]);
 		});
@@ -2982,16 +3128,16 @@
 		return options;
 	};
 
-	// FIELDS.RADIOS PLUGIN DEFINITION
-	// =================================
+	// FIELD.RADIOS PLUGIN DEFINITION
+	// ================================
 
 	function Plugin(option) {
 		var self = this;
 
-		// FIELDS.RADIOS PUBLIC METHOD EXTENDS FIELDS
-		// ============================================
+		// FIELD.RADIOS PUBLIC METHOD EXTENDS FIELD.MULTI
+		// ================================================
 
-		this.extend($.fn.fields.prototype);
+		this.extend($.fn.multifield.prototype);
 
 		return this.each(function () {
 			var $this   = $(this);
@@ -3002,7 +3148,7 @@
 			if (!plugin) $this.data('jsea.plugin', self);
 
 			if (!data && /destroy|hide/.test(option)) return;
-			if (!data) $this.data('jsea.fields.radios', (data = new Radios(this, options)));
+			if (!data) $this.data('jsea.field.radios', (data = new Radios(this, options)));
 			if (typeof option == 'string') data[option]();
 		});
 	}
@@ -3012,8 +3158,8 @@
 	$.fn.radios             = Plugin;
 	$.fn.radios.Constructor = Radios;
 
-	// FIELDS.RADIOS NO CONFLICT
-	// ===========================
+	// FIELD.RADIOS NO CONFLICT
+	// ==========================
 
 	$.fn.radios.noConflict = function () {
 		$.fn.radios = old;
@@ -3042,32 +3188,26 @@
 
 	Radio.VERSION  = '1.1.0';
 
-	Radio.DEFAULTS = $.extend({}, $.fn.field.Constructor.DEFAULTS);
+	Radio.DEFAULTS = $.extend({}, $.fn.singlefield.Constructor.DEFAULTS);
 
-	// NOTE: FIELD.RADIO EXTENDS FIELD
-	// =================================
+	// NOTE: FIELD.RADIO EXTENDS FIELD.SINGLE
+	// ========================================
 
-	Radio.prototype = $.extend({}, $.fn.field.Constructor.prototype);
+	Radio.prototype = $.extend({}, $.fn.singlefield.Constructor.prototype);
 
 	Radio.prototype.constructor = Radio;
 
 	Radio.prototype.initField = function () {
+		this.beforeInit();
 		this.$wrapper = this.$element.closest('li.element');
 		this.$radio   = this.$wrapper.find(':radio');
 		this.$radio.hide();
-		// build option text
-		var radioValue = this.$radio.val();
-		var i18nPrefix = this.options.i18nPrefix;
-		if (i18nPrefix) {
-			this.$wrapper.find('label:first').each(function () {
-				var $option = $(this);
-				if (radioValue && radioValue.length > 0) {
-					$option.text(JSEA.localizeMessage(i18nPrefix + JSEA.Constants.I18N_KEY_SEPARATOR + radioValue));
-				}
-			});
-		}
 	};
-	
+
+	Radio.prototype.resolveFieldType = function () {
+		return('radio');
+	};
+
 	Radio.prototype.getValue = function () {
 		return this.$element.attr('data-value');
 	};
@@ -3102,16 +3242,16 @@
 		return options;
 	};
   
-	// RADIO PLUGIN DEFINITION
-	// =========================
+	// FIELD.RADIO PLUGIN DEFINITION
+	// ===============================
 
 	function Plugin(option) {
 		var self = this;
 
-		// FIELD.RADIO PUBLIC METHOD EXTENDS FIELD
-		// =========================================
+		// FIELD.RADIO PUBLIC METHOD EXTENDS FIELD.SINGLE
+		// ================================================
 
-		self.extend($.fn.field.prototype);
+		self.extend($.fn.singlefield.prototype);
 
 		// FIELD.RADIO PUBLIC METHOD DEFINITION
 		// ======================================
