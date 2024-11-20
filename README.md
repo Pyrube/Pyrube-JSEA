@@ -3,12 +3,12 @@ Pyrube-JSEA is a framework of JAVASCRIT-based APIs. It provides some components,
 JSEA.One is a super class for all JSEA components and elements. Based on JSEA Inheritance Mechanism, you can have specified concrete components or elements/fields.
 # Falect Field (Fast-select/Drag-next List) with Icon
 Improve the user experience , instead of select field (drop-down list).
-![JSEA FalectField](https://github.com/Pyrube/Pyrube-JSEA/assets/141699844/425bc488-4ceb-4caa-98a3-632770c9d6af)
+![FalectField](https://github.com/user-attachments/assets/0e4806c4-3d7d-4480-a47d-048a54597ffb)
 # Sample List - JSP Code
-![SampleList_JSP](https://github.com/Pyrube/Pyrube-JSEA/assets/141699844/aaae9c85-dcf8-4076-85c5-4fd4fa24f7bd)
+![SampleList_JSP](https://github.com/user-attachments/assets/f066e5c7-6403-4c98-b861-58681d1f1e36)
 # Sample List - Mobile Page
-![SampleList_Mobile](https://github.com/Pyrube/Pyrube-JSEA/assets/141699844/dad011d8-08ff-4d8f-885e-0116f57ab5d7)
+![SampleList_Mobile](https://github.com/user-attachments/assets/f9bb919e-6e12-4727-9f03-1961fb6e19c6)
 # Sample Create - JSP Code
 ![SampleCreate_JSP](https://github.com/Pyrube/Pyrube-JSEA/assets/141699844/2d2642ec-8513-4d9d-8d8b-f5a6a083eede)
 # Sample Create - Mobile Page
-![SampleCreate_Mobile](https://github.com/Pyrube/Pyrube-JSEA/assets/141699844/6cb7088e-32d2-467b-9079-4cf375bf6760)
+![SampleCreate_Mobile](https://github.com/user-attachments/assets/40bd5c03-bf04-48bf-a3bc-6105e734a520)
