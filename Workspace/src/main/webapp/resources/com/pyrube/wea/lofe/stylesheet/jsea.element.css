@@ -7,9 +7,12 @@
 	--elem-arrow-hover: #4F4F4F;
 	--elem-arrow-active: #363636;
 	--elem-arrow-disabled: #9C9C9C;
+	--option-font: #333333;
+	--option-font-active: #FFFFFF;
 	--option-color: #FEFEFE;
-	--option-color-hover: #F0F4FF;
-	--option-color-active: #E5F1FF;
+	--option-color-hover: #E5F1FF;
+	--option-color-active: #1F77AA;
+	--option-shadow-active: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
 	--tap-font: #FFFFFF;
 	--tap-font-on: #FFFFFF;
 	--tap-font-off: #333333;
@@ -29,12 +32,15 @@ html[data-theme="DARK"]    {
 	--elem-arrow-hover: #F7F7F7;
 	--elem-arrow-active: #FFFFFF;
 	--elem-arrow-disabled: #828282;
+	--option-font: #FFFFFF;
+	--option-font-active: #FFFFFF;
 	--option-color: #4F4F4F;
-	--option-color-hover: #696969;
-	--option-color-active: #282A2C;
+	--option-color-hover: #282A2C;
+	--option-color-active: #1F77AA;
+	--option-shadow-active: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
 	--tap-font: #FFFFFF;
 	--tap-font-on: #FFFFFF;
-	--tap-font-off: #FFFFFF
+	--tap-font-off: #FFFFFF;
 	--tap-color: #515151;
 	--tap-color-on: #1F77AA;
 	--tap-color-off: #828282;
@@ -211,6 +217,7 @@ div.select-wrapper {
 	position: relative;
 	display: inline-block;
 }
+div.select-wrapper input[type="text"].select-text { padding-right: 20px; }
 	div.select-wrapper a.dropdown {
 		position: absolute;
 		right: -1px; bottom: 0;
@@ -249,20 +256,28 @@ div.select-wrapper {
 	div.select-wrapper .select-option {
 		padding: 2px 6px 3px 6px;
 		line-height: 23px;
+		color: var(--option-font);
 		text-align: left;
 		background-color: var(--option-color);
 		cursor: pointer;
 		cursor: hand;
 		zoom: 1;
 	}
-	div.select-wrapper .select-option:hover, .select-wrapper .select-option.hover { background-color: var(--option-color-hover); }
-	div.select-wrapper .select-option.selected { background-color: var(--option-color-active); }
+	div.select-wrapper .select-option:hover,
+	div.select-wrapper .select-option.hover { background-color: var(--option-color-hover); }
+	div.select-wrapper .select-option.selected { color: var(--option-font-active); background-color: var(--option-color-active); }
 
 /** Drag-next List (Fast Select) **/
 div.falect-wrapper {
 	position: relative;
 	display: inline-block;
 }
+	div.falect-wrapper input[type="text"].falect-text {
+		position: absolute;
+		top: 0; left: 0;
+		padding-right: 135px !important;
+	}
+	div.falect-wrapper input[type="text"].falect-text.autoincrement { padding-right: 27px !important; padding-left: 27px; }
 	div.falect-wrapper a.dragprev {
 		position: absolute;
 		right: 0; bottom: 0;
@@ -294,14 +309,12 @@ div.falect-wrapper {
 	div.falect-wrapper a.dragnext.disabled:after { border-left-color: var(--elem-arrow-disabled); }
 	
 	div.falect-wrapper .falect-panel {
-		height: calc(100% - 2px);
 		position: absolute;
-		top: 1px;
-		right: 22px;
+		top: 0; right: 22px;
 		margin: 0px;
+		height: 100%;
 		background: transparent;
-		border-right: var(--panel-border);
-		border-left: var(--panel-border);
+		border: var(--panel-border);
 		-webkit-box-sizing: border-box;
 		-moz-box-sizing: border-box;
 		box-sizing: border-box;
@@ -321,10 +334,11 @@ div.falect-wrapper {
 		width: 35px;
 		padding: 2px 6px 3px 6px;
 		height: 100%;
-		line-height: calc(100% + 5px);
+		line-height: calc(100% + 10px);
 		text-align: left;
 		background-color: var(--option-color);
 		font-size: 10px;
+		color: var(--option-font);
 		text-align: center;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -339,9 +353,16 @@ div.falect-wrapper {
 		cursor: hand;
 		zoom: 1;
 	}
-	div.falect-wrapper .falect-option:hover, .falect-wrapper .falect-option.hover { background-color: var(--option-color-hover); }
-	div.falect-wrapper .falect-option.selected { background-color: var(--option-color-active); }
+	div.falect-wrapper .falect-option:hover,
+	div.falect-wrapper .falect-option.hover,
 	div.falect-wrapper .falect-option.scrolled { background-color: var(--option-color-hover); }
+	div.falect-wrapper .falect-option.selected { 
+		color: var(--option-font-active);
+		background-color: var(--option-color-active);
+		-webkit-box-shadow: var(--option-shadow-active);
+		-moz-box-shadow: var(--option-shadow-active);
+		box-shadow: var(--option-shadow-active);
+	}
 	div.falect-wrapper .falect-panel.disabled .falect-options .falect-option {
 		color: var(--jsea-font-disabled);
 		-webkit-filter: grayscale(60%);
@@ -375,31 +396,32 @@ ul.radios.error { border: var(--jsea-error-border); }
 	
 	ul.radios.chips > li {
 		position: relative;
-		min-width: 50px; height: 28px;
-		color: var(--tap-font-off);
-		background-color: var(--tap-color-off);
-		border: var(--tap-border);
+		width: fit-content; height: 27px;
+		color: var(--option-font);
+		background-color: var(--option-color);
+		border: var(--field-border);
 		border-right: none;
 	}
-	ul.radios.chips > li:last-child { border-right: var(--tap-border); }
+	ul.radios.chips > li:hover { background-color: var(--option-color-hover); }
+	ul.radios.chips > li:last-child { border-right: var(--field-border); }
 	ul.radios.chips > li.checked {
-		color: var(--tap-font-on);
-		background-color: var(--tap-color-on);
-		-webkit-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
-		-moz-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
-		box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+		color: var(--option-font-active);
+		background-color: var(--option-color-active);
+		-webkit-box-shadow: var(--option-shadow-active);
+		-moz-box-shadow: var(--option-shadow-active);
+		box-shadow: var(--option-shadow-active);
 	}
 	ul.radios.chips > li > label {
-		padding: 4px;
-		position: absolute;
-		top: 0; left: 0;
+		padding: 0 5px;
 		width: 100%; height: 100%;
-		line-height: 18px;
+		line-height: 22px;
 		text-align: center !important;
 		vertical-align: middle !important;
 		pointer-events: none;
 	}
 	ul.radios.chips > li > span.radio {
+		position: absolute;
+		top: 0; left: 0;
 		width: 100%; height: 100%;
 		background-image: none;
 	}
@@ -427,31 +449,32 @@ ul.checkboxes.error { border: var(--jsea-error-border); }
 	
 	ul.checkboxes.chips > li {
 		position: relative;
-		min-width: 50px; height: 28px;
-		color: var(--tap-font-off);
-		background-color: var(--tap-color-off);
-		border: var(--tap-border);
+		width: fit-content; height: 27px;
+		color: var(--option-font);
+		background-color: var(--option-color);
+		border: var(--field-border);
 		border-right: none;
 	}
-	ul.checkboxes.chips > li:last-child { border-right: var(--tap-border); }
+	ul.checkboxes.chips > li:hover { background-color: var(--option-color-hover); }
+	ul.checkboxes.chips > li:last-child { border-right: var(--field-border); }
 	ul.checkboxes.chips > li.checked {
-		color: var(--tap-font-on);
-		background-color: var(--tap-color-on);
-		-webkit-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
-		-moz-box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
-		box-shadow: inset 2px 2px 3px rgba(00, 00, 00, 0.15);
+		color: var(--option-font-active);
+		background-color: var(--option-color-active);
+		-webkit-box-shadow: var(--option-shadow-active);
+		-moz-box-shadow: var(--option-shadow-active);
+		box-shadow: var(--option-shadow-active);
 	}
 	ul.checkboxes.chips > li > label {
-		padding: 4px;
-		position: absolute;
-		top: 0; left: 0;
+		padding: 0 5px;
 		width: 100%; height: 100%;
-		line-height: 18px;
+		line-height: 22px;
 		text-align: center !important;
 		vertical-align: middle !important;
 		pointer-events: none;
 	}
 	ul.checkboxes.chips > li > span.checkbox {
+		position: absolute;
+		top: 0; left: 0;
 		width: 100%; height: 100%;
 		background-image: none;
 	}
