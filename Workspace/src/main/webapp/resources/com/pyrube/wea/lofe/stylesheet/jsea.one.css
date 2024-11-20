@@ -55,6 +55,11 @@ form   { display: block; }
 ul, li { list-style: none; }
 a      { text-decoration: none; background-color: transparent; }
 
+/** Staying **/
+.staying.hidden {
+	opacity: 0;
+}
+
 /** Sliding Container **/
 .sliding-container { position: relative; }
 
